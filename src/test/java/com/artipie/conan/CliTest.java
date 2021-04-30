@@ -17,6 +17,6 @@ class CliTest {
 
     @Test
     void testMain() {
-        Cli.main();
+        Cli.main(); // checking it not throwing exceptions
     }
 }

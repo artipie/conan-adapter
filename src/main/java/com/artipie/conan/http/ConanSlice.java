@@ -16,6 +16,10 @@ public class ConanSlice extends Slice.Wrap  {
         this(storage, Permissions.FREE, Authentication.ANONYMOUS, new ConanRepoConfig.Simple());
     }
 
+    ConanSlice(Storage storage, ConanRepoConfig config) {
+        this(storage, Permissions.FREE, Authentication.ANONYMOUS, config);
+    }
+
     public ConanSlice(
             final Storage storage,
             final Permissions perms,
