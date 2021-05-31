@@ -100,9 +100,15 @@ zmqpp/
 
 ## How to use Artipie Conan SDK
 
-TODO
+This is the dependency you need:
+
+```xml
+<dependency>
+  <groupId>com.artipie</groupId>
+  <artifactId>conan-adapter</artifactId>
+  <version>[...]</version>
+</dependency>
+```
 
 ## How to configure and start Artipie Conan endpoint
-
-TODO
 

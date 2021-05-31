@@ -21,28 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.artipie.conan;
-
-import org.junit.jupiter.api.Test;
 
 /**
- * Test case for {@link Cli}.
- * @since 0.1
+ * HTTP repository API.
  */
-class CliTest {
-
-    @org.junit.jupiter.api.BeforeEach
-    void setUp() {
-        //setup
-    }
-
-    @org.junit.jupiter.api.AfterEach
-    void tearDown() {
-        //teardown
-    }
-
-    @Test
-    void testMain() {
-        Cli.main();
-    }
-}
+package com.artipie.conan.http;
