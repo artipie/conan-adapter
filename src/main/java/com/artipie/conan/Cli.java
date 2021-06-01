@@ -48,7 +48,7 @@ public final class Cli {
     public static void main(final String... args) {
         final Path path = Paths.get(".");
         final Storage storage = new FileStorage(path);
-        final ConanRepo repo = new ConanRepo(storage, new ConanRepoConfig.Simple());
+        final ConanRepo repo = new ConanRepo(storage);
         repo.batchUpdateIncrementally(Key.ROOT);
     }
 }

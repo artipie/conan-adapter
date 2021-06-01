@@ -24,7 +24,6 @@
 package com.artipie.conan.http;
 
 import com.artipie.asto.Storage;
-import com.artipie.conan.ConanRepoConfig;
 import com.artipie.http.Slice;
 import com.artipie.http.auth.Action;
 import com.artipie.http.auth.Authentication;
@@ -49,16 +48,7 @@ public class ConanSlice extends Slice.Wrap  {
      * @param storage Storage object.
      */
     ConanSlice(final Storage storage) {
-        this(storage, Permissions.FREE, Authentication.ANONYMOUS, new ConanRepoConfig.Simple());
-    }
-
-    /**
-     * Ctor.
-     * @param storage Storage object.
-     * @param config Configuration object.
-     */
-    ConanSlice(final Storage storage, final ConanRepoConfig config) {
-        this(storage, Permissions.FREE, Authentication.ANONYMOUS, config);
+        this(storage, Permissions.FREE, Authentication.ANONYMOUS);
     }
 
     /**
@@ -66,14 +56,12 @@ public class ConanSlice extends Slice.Wrap  {
      * @param storage Storage object.
      * @param perms Permissions.
      * @param auth Authentication parameters.
-     * @param config Configuration object.
      * @checkstyle ParameterNumberCheck (7 lines)
      */
     public ConanSlice(
         final Storage storage,
         final Permissions perms,
-        final Authentication auth,
-        final ConanRepoConfig config
+        final Authentication auth
     ) {
         super(
             new SliceRoute(
@@ -88,7 +76,7 @@ public class ConanSlice extends Slice.Wrap  {
                 new RtRulePath(
                     new ByMethodsRule(RqMethod.PUT),
                     new BasicAuthSlice(
-                        new ConanUpload(storage, config),
+                        new ConanUpload(storage),
                         auth,
                         new Permission.ByName(perms, Action.Standard.WRITE)
                     )

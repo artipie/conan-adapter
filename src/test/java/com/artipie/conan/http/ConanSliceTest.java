@@ -25,7 +25,6 @@ package com.artipie.conan.http;
 
 import com.artipie.asto.Storage;
 import com.artipie.asto.memory.InMemoryStorage;
-import com.artipie.conan.ConanRepoConfig;
 import com.artipie.http.slice.LoggingSlice;
 import com.artipie.vertx.VertxSliceServer;
 import com.jcabi.log.Logger;
@@ -92,8 +91,7 @@ class ConanSliceTest {
             ConanSliceTest.VERTX,
                 new LoggingSlice(
                     new ConanSlice(
-                        this.storage,
-                        new ConanRepoConfig.Simple()
+                        this.storage
                     )
                 )
             );

@@ -39,18 +39,11 @@ public final class ConanRepo {
     private final Storage storage;
 
     /**
-     * Repository configuration.
-     */
-    private final ConanRepoConfig config;
-
-    /**
      * Main constructor.
      * @param storage Asto storage object
-     * @param config Conan repository configuration object
      */
-    public ConanRepo(final Storage storage, final ConanRepoConfig config) {
+    public ConanRepo(final Storage storage) {
         this.storage = storage;
-        this.config = config;
     }
 
     /**
@@ -62,22 +55,12 @@ public final class ConanRepo {
     }
 
     /**
-     * Config object getter.
-     * @return Returns current configuration.
-     */
-    public ConanRepoConfig getConfig() {
-        return this.config;
-    }
-
-    /**
      * Updates repository incrementally.
      * @param prefix Repo prefix
      * @return Completable action
+     * @checkstyle NonStaticMethodCheck (5 lines)
      */
     public Completable batchUpdateIncrementally(final Key prefix) {
-        if (this.config == null) {
-            throw new IllegalStateException("this.config must be set");
-        }
         return null;
     }
 }

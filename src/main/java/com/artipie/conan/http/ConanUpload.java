@@ -25,7 +25,6 @@ package com.artipie.conan.http;
 
 import com.artipie.asto.Storage;
 import com.artipie.conan.ConanRepo;
-import com.artipie.conan.ConanRepoConfig;
 import com.artipie.http.Response;
 import com.artipie.http.Slice;
 import java.nio.ByteBuffer;
@@ -51,11 +50,10 @@ public final class ConanUpload implements Slice {
     /**
      * Ctor.
      * @param storage Storage object.
-     * @param config Config object.
      */
-    public ConanUpload(final Storage storage, final ConanRepoConfig config) {
+    public ConanUpload(final Storage storage) {
         this.asto = storage;
-        this.repo = new ConanRepo(storage, config);
+        this.repo = new ConanRepo(storage);
     }
 
     /**
