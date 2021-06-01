@@ -31,7 +31,7 @@ import io.reactivex.Completable;
  * Conan repo frontend.
  * @since 0.1
  */
-public class ConanRepo {
+public final class ConanRepo {
 
     /**
      * Primary storage.
