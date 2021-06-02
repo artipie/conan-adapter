@@ -40,11 +40,13 @@ public final class ConanUpload implements Slice {
     /**
      * Asto storage.
      */
+    @SuppressWarnings({"PMD.UnusedPrivateField", "PMD.SingularField"})
     private final Storage asto;
 
     /**
      * Rpm instance.
      */
+    @SuppressWarnings({"PMD.UnusedPrivateField", "PMD.SingularField"})
     private final ConanRepo repo;
 
     /**
@@ -54,22 +56,6 @@ public final class ConanUpload implements Slice {
     public ConanUpload(final Storage storage) {
         this.asto = storage;
         this.repo = new ConanRepo(storage);
-    }
-
-    /**
-     * Returns storage.
-     * @return Asto storage object.
-     */
-    public Storage getAsto() {
-        return this.asto;
-    }
-
-    /**
-     * Returns repository.
-     * @return Repository object.
-     */
-    public ConanRepo getRepo() {
-        return this.repo;
     }
 
     @Override

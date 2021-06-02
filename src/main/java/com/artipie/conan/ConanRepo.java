@@ -36,6 +36,7 @@ public final class ConanRepo {
     /**
      * Primary storage.
      */
+    @SuppressWarnings({"PMD.UnusedPrivateField", "PMD.SingularField"})
     private final Storage storage;
 
     /**
@@ -44,14 +45,6 @@ public final class ConanRepo {
      */
     public ConanRepo(final Storage storage) {
         this.storage = storage;
-    }
-
-    /**
-     * Storage object getter.
-     * @return Returns current storage object.
-     */
-    public Storage getStorage() {
-        return this.storage;
     }
 
     /**
