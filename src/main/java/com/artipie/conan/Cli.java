@@ -26,6 +26,11 @@ package com.artipie.conan;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.fs.FileStorage;
+import com.artipie.conan.http.ConanSlice;
+import com.artipie.http.slice.LoggingSlice;
+import com.artipie.vertx.VertxSliceServer;
+import io.vertx.reactivex.core.Vertx;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -46,9 +51,13 @@ public final class Cli {
      * @param args Command line arguments.
      */
     public static void main(final String... args) {
-        final Path path = Paths.get(".");
+        final Path path = Paths.get("/home/user/.conan_server/data");
         final Storage storage = new FileStorage(path);
         final ConanRepo repo = new ConanRepo(storage);
         repo.batchUpdateIncrementally(Key.ROOT);
+        final Vertx vertx = Vertx.vertx();
+        VertxSliceServer server = new VertxSliceServer(vertx, new LoggingSlice(new ConanSlice(storage)), 9300);
+        int port = server.start();
+        System.out.println("Port: " + port);
     }
 }
