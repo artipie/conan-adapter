@@ -30,7 +30,6 @@ import com.artipie.conan.http.ConanSlice;
 import com.artipie.http.slice.LoggingSlice;
 import com.artipie.vertx.VertxSliceServer;
 import io.vertx.reactivex.core.Vertx;
-
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -39,6 +38,8 @@ import java.nio.file.Paths;
  * @since 0.1
  */
 public final class Cli {
+
+    private static final int CONAN_PORT = 9300;
 
     /**
      * Private constructor for main class.
@@ -56,8 +57,7 @@ public final class Cli {
         final ConanRepo repo = new ConanRepo(storage);
         repo.batchUpdateIncrementally(Key.ROOT);
         final Vertx vertx = Vertx.vertx();
-        VertxSliceServer server = new VertxSliceServer(vertx, new LoggingSlice(new ConanSlice(storage)), 9300);
-        int port = server.start();
-        System.out.println("Port: " + port);
+        final VertxSliceServer server = new VertxSliceServer(vertx, new LoggingSlice(new ConanSlice(storage)), Cli.CONAN_PORT);
+        server.start();
     }
 }

@@ -38,7 +38,6 @@ import com.artipie.http.rs.RsStatus;
 import com.artipie.http.rs.RsWithBody;
 import com.artipie.http.rs.RsWithHeaders;
 import com.artipie.http.rs.RsWithStatus;
-import com.artipie.http.rs.common.RsJson;
 import com.artipie.http.rt.ByMethodsRule;
 import com.artipie.http.rt.RtRule;
 import com.artipie.http.rt.RtRulePath;
@@ -46,20 +45,20 @@ import com.artipie.http.rt.SliceRoute;
 import com.artipie.http.slice.SliceDownload;
 import com.artipie.http.slice.SliceSimple;
 import com.sun.tools.javac.util.List;
-
-import javax.json.*;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
+import javax.json.Json;
 
 /**
  * Artipie {@link Slice} for Conan repository HTTP API.
- * @since 0.1
+ *
  * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
+ * @since 0.1
  */
-public class ConanSlice extends Slice.Wrap  {
+public class ConanSlice extends Slice.Wrap {
 
     /**
      * Ctor.
+     *
      * @param storage Storage object.
      */
     public ConanSlice(final Storage storage) {
@@ -68,9 +67,10 @@ public class ConanSlice extends Slice.Wrap  {
 
     /**
      * Ctor.
+     *
      * @param storage Storage object.
-     * @param perms Permissions.
-     * @param auth Authentication parameters.
+     * @param perms   Permissions.
+     * @param auth    Authentication parameters.
      * @checkstyle ParameterNumberCheck (7 lines)
      */
     public ConanSlice(
@@ -81,40 +81,69 @@ public class ConanSlice extends Slice.Wrap  {
         super(
             new SliceRoute(
                 new RtRulePath(
-                        new RtRule.ByPath("/v1/ping"), // Useful to get server capabilities
-                        new SliceSimple(
-                                new RsWithHeaders(
-                                        new RsWithStatus(RsStatus.ACCEPTED),
-                                        new Headers.From("X-Conan-Server-Capabilities", "")
-                                )
+                    new RtRule.ByPath("/v1/ping"),
+                    new SliceSimple(
+                        new RsWithHeaders(
+                            new RsWithStatus(RsStatus.ACCEPTED),
+                            new Headers.From("X-Conan-Server-Capabilities", "")
                         )
+                    )
                 ),
                 new RtRulePath(
-                        new RtRule.ByPath("/v1/conans/search"),
-                        new SliceSimple(
-                                new RsWithBody(
-                                        new RsWithHeaders(
-                                                new RsWithStatus(RsStatus.OK),
-                                                new ContentType(String.format("application/json")),
-                                                new Header("Server", "Artipie/0.1")
-                                            ),
-                                        Json.createObjectBuilder().add(
-                                                "results", Json.createArrayBuilder(List.from(new String[]{"test1/1.0", "test2/0.1"}))
-                                        ).build().toString().getBytes(StandardCharsets.UTF_8)
-                                )
+                    new RtRule.ByPath("/v1/conans/search"),
+                    new BasicAuthSlice(new SliceSimple(
+                        new RsWithBody(
+                            new RsWithHeaders(
+                                new RsWithStatus(RsStatus.OK),
+                                new ContentType(String.format("application/json")),
+                                new Header("Server", "Artipie/0.1")
+                            ),
+                            Json.createObjectBuilder().add(
+                                "results", Json.createArrayBuilder(List.from(new String[]{
+                                    "test1/1.0", "test2/0.1"
+                                }))
+                            ).build().toString().getBytes(StandardCharsets.UTF_8)
                         )
+                    ),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.WRITE)
+                    )
                 ),
                 new RtRulePath(
-                        new RtRule.All(
-                            new RtRule.ByPath(
-                                ConansEntity.PATH),
-                                ByMethodsRule.Standard.GET
-                        ),
-                        new BasicAuthSlice(
-                                new ConansEntity.Get(storage),
-                                auth,
-                                new Permission.ByName(perms, Action.Standard.READ)
-                        )
+                    new RtRule.All(
+                        new RtRule.ByPath(
+                            ConansEntity.DOWNLOAD_PATH),
+                        ByMethodsRule.Standard.GET
+                    ),
+                    new BasicAuthSlice(
+                        new ConansEntity.GetDownload(storage),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.READ)
+                    )
+                ),
+                new RtRulePath(
+                    new RtRule.All(
+                        new RtRule.ByPath(
+                            ConansEntity.SEARCH_PKG_PATH),
+                        ByMethodsRule.Standard.GET
+                    ),
+                    new BasicAuthSlice(
+                        new ConansEntity.GetSearchPkg(storage),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.READ)
+                    )
+                ),
+                new RtRulePath(
+                    new RtRule.All(
+                        new RtRule.ByPath(
+                            ConansEntity.PKG_INFO_PATH),
+                        ByMethodsRule.Standard.GET
+                    ),
+                    new BasicAuthSlice(
+                        new ConansEntity.GetPkgInfo(storage),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.READ)
+                    )
                 ),
                 new RtRulePath(
                     new ByMethodsRule(RqMethod.GET),
