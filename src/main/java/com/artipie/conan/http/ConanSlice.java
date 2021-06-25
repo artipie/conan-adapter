@@ -50,15 +50,13 @@ import javax.json.Json;
 
 /**
  * Artipie {@link Slice} for Conan repository HTTP API.
- *
- * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
  * @since 0.1
+ * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
  */
 public class ConanSlice extends Slice.Wrap {
 
     /**
      * Ctor.
-     *
      * @param storage Storage object.
      */
     public ConanSlice(final Storage storage) {
@@ -69,8 +67,8 @@ public class ConanSlice extends Slice.Wrap {
      * Ctor.
      *
      * @param storage Storage object.
-     * @param perms   Permissions.
-     * @param auth    Authentication parameters.
+     * @param perms Permissions.
+     * @param auth Authentication parameters.
      * @checkstyle ParameterNumberCheck (7 lines)
      */
     public ConanSlice(
@@ -91,28 +89,30 @@ public class ConanSlice extends Slice.Wrap {
                 ),
                 new RtRulePath(
                     new RtRule.ByPath("/v1/conans/search"),
-                    new BasicAuthSlice(new SliceSimple(
-                        new RsWithBody(
-                            new RsWithHeaders(
-                                new RsWithStatus(RsStatus.OK),
-                                new ContentType(String.format("application/json")),
-                                new Header("Server", "Artipie/0.1")
-                            ),
-                            Json.createObjectBuilder().add(
-                                "results", Json.createArrayBuilder(List.from(new String[]{
-                                    "test1/1.0", "test2/0.1"
-                                }))
-                            ).build().toString().getBytes(StandardCharsets.UTF_8)
-                        )
-                    ),
+                    new BasicAuthSlice(
+                        new SliceSimple(
+                            new RsWithBody(
+                                new RsWithHeaders(
+                                    new RsWithStatus(RsStatus.OK),
+                                    new ContentType(String.format("application/json")),
+                                    new Header("Server", "Artipie/0.1")
+                                ),
+                                Json.createObjectBuilder().add(
+                                    "results", Json.createArrayBuilder(
+                                        List.from(
+                                            new String[]{
+                                                "test1/1.0", "test2/0.1",
+                                            }))
+                                ).build().toString().getBytes(StandardCharsets.UTF_8)
+                            )
+                        ),
                         auth,
                         new Permission.ByName(perms, Action.Standard.WRITE)
                     )
                 ),
                 new RtRulePath(
                     new RtRule.All(
-                        new RtRule.ByPath(
-                            ConansEntity.DOWNLOAD_PATH),
+                        new RtRule.ByPath(ConansEntity.DLOAD_SRC_PATH),
                         ByMethodsRule.Standard.GET
                     ),
                     new BasicAuthSlice(
@@ -123,8 +123,7 @@ public class ConanSlice extends Slice.Wrap {
                 ),
                 new RtRulePath(
                     new RtRule.All(
-                        new RtRule.ByPath(
-                            ConansEntity.SEARCH_PKG_PATH),
+                        new RtRule.ByPath(ConansEntity.SEARCH_PKG_PATH),
                         ByMethodsRule.Standard.GET
                     ),
                     new BasicAuthSlice(
@@ -135,8 +134,7 @@ public class ConanSlice extends Slice.Wrap {
                 ),
                 new RtRulePath(
                     new RtRule.All(
-                        new RtRule.ByPath(
-                            ConansEntity.PKG_INFO_PATH),
+                        new RtRule.ByPath(ConansEntity.PKG_BIN_INFO_PATH),
                         ByMethodsRule.Standard.GET
                     ),
                     new BasicAuthSlice(

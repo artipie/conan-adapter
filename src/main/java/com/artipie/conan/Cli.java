@@ -39,6 +39,9 @@ import java.nio.file.Paths;
  */
 public final class Cli {
 
+    /**
+     * TCP Port for Conan server. Default is 9300.
+     */
     private static final int CONAN_PORT = 9300;
 
     /**
@@ -57,7 +60,11 @@ public final class Cli {
         final ConanRepo repo = new ConanRepo(storage);
         repo.batchUpdateIncrementally(Key.ROOT);
         final Vertx vertx = Vertx.vertx();
-        final VertxSliceServer server = new VertxSliceServer(vertx, new LoggingSlice(new ConanSlice(storage)), Cli.CONAN_PORT);
+        final VertxSliceServer server = new VertxSliceServer(
+            vertx,
+            new LoggingSlice(new ConanSlice(storage)),
+            Cli.CONAN_PORT
+        );
         server.start();
     }
 }
