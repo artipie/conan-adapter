@@ -44,7 +44,7 @@ import com.artipie.http.rt.RtRulePath;
 import com.artipie.http.rt.SliceRoute;
 import com.artipie.http.slice.SliceDownload;
 import com.artipie.http.slice.SliceSimple;
-import com.sun.tools.javac.util.List;
+import com.google.common.collect.Lists;
 import java.nio.charset.StandardCharsets;
 import javax.json.Json;
 
@@ -99,10 +99,9 @@ public class ConanSlice extends Slice.Wrap {
                                 ),
                                 Json.createObjectBuilder().add(
                                     "results", Json.createArrayBuilder(
-                                        List.from(
-                                            new String[]{
-                                                "test1/1.0", "test2/0.1",
-                                            }))
+                                        Lists.newArrayList(
+                                            "test1/1.0", "test2/0.1"
+                                            ))
                                 ).build().toString().getBytes(StandardCharsets.UTF_8)
                             )
                         ),
