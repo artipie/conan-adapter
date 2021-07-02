@@ -69,7 +69,6 @@ public class ConanSlice extends Slice.Wrap {
      * @param storage Storage object.
      * @param perms Permissions.
      * @param auth Authentication parameters.
-     * @checkstyle ParameterNumberCheck (7 lines)
      */
     public ConanSlice(
         final Storage storage,
@@ -79,7 +78,7 @@ public class ConanSlice extends Slice.Wrap {
         super(
             new SliceRoute(
                 new RtRulePath(
-                    new RtRule.ByPath("/v1/ping"),
+                    new RtRule.ByPath("^/v1/ping$"),
                     new SliceSimple(
                         new RsWithHeaders(
                             new RsWithStatus(RsStatus.ACCEPTED),
@@ -111,7 +110,7 @@ public class ConanSlice extends Slice.Wrap {
                 ),
                 new RtRulePath(
                     new RtRule.All(
-                        new RtRule.ByPath(ConansEntity.DLOAD_SRC_PATH),
+                        new RtRule.ByPath(ConansEntity.DLOAD_SRC_PATH.getPath()),
                         ByMethodsRule.Standard.GET
                     ),
                     new BasicAuthSlice(
@@ -122,7 +121,7 @@ public class ConanSlice extends Slice.Wrap {
                 ),
                 new RtRulePath(
                     new RtRule.All(
-                        new RtRule.ByPath(ConansEntity.SEARCH_PKG_PATH),
+                        new RtRule.ByPath(ConansEntity.SEARCH_PKG_PATH.getPath()),
                         ByMethodsRule.Standard.GET
                     ),
                     new BasicAuthSlice(
@@ -133,7 +132,7 @@ public class ConanSlice extends Slice.Wrap {
                 ),
                 new RtRulePath(
                     new RtRule.All(
-                        new RtRule.ByPath(ConansEntity.PKG_BIN_INFO_PATH),
+                        new RtRule.ByPath(ConansEntity.PKG_BIN_INFO_PATH.getPath()),
                         ByMethodsRule.Standard.GET
                     ),
                     new BasicAuthSlice(
