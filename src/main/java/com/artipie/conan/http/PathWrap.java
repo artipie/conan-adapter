@@ -95,11 +95,11 @@ public abstract class PathWrap {
      * Request path for /search reqest (for package binaries).
      * @since 0.1
      */
-    public static final class SearchPkg extends PathWrap {
+    public static final class SearchBinPkg extends PathWrap {
         /**
          * Ctor.
          */
-        protected SearchPkg() {
+        protected SearchBinPkg() {
             super("^/v1/conans/(?<path>.*)/search$");
         }
     }
@@ -114,6 +114,19 @@ public abstract class PathWrap {
          */
         protected PkgBinInfo() {
             super("^/v1/conans/(?<path>.*)/packages/(?<hash>[0-9,a-f]*)$");
+        }
+    }
+
+    /**
+     * Request path for /search reqest (for package recipes).
+     * @since 0.1
+     */
+    public static class SearchSrcPkg extends PathWrap {
+        /**
+         * Ctor.
+         */
+        protected SearchSrcPkg() {
+            super("^/v1/conans/search$");
         }
     }
 }

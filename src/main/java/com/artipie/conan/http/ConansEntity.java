@@ -47,9 +47,11 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
@@ -81,12 +83,19 @@ public final class ConansEntity {
     /**
      * Pattern for /search reqest (for package binaries).
      */
-    public static final PathWrap SEARCH_PKG_PATH = new PathWrap.SearchPkg();
+    @SuppressWarnings("PMD.LongVariable")
+    public static final PathWrap SEARCH_BIN_PKG_PATH = new PathWrap.SearchBinPkg();
 
     /**
      * Pattern for package binary info by its hash.
      */
     public static final PathWrap PKG_BIN_INFO_PATH = new PathWrap.PkgBinInfo();
+
+    /**
+     * Pattern for package recipe search by name.
+     */
+    @SuppressWarnings("PMD.LongVariable")
+    public static final PathWrap SEARCH_SRC_PKG_PATH = new PathWrap.SearchSrcPkg();
 
     /**
      * Protocol type for download URIs.
@@ -320,7 +329,7 @@ public final class ConansEntity {
      * @since 0.1
      * @checkstyle ClassDataAbstractionCouplingCheck (99 lines)
      */
-    public static final class GetSearchPkg implements Slice {
+    public static final class GetSearchBinPkg implements Slice {
         /**
          * Current Artipie storage instance.
          */
@@ -331,7 +340,7 @@ public final class ConansEntity {
          *
          * @param storage Current Artipie storage instance.
          */
-        public GetSearchPkg(final Storage storage) {
+        public GetSearchBinPkg(final Storage storage) {
             this.storage = storage;
         }
 
@@ -416,7 +425,7 @@ public final class ConansEntity {
          * @return Contents of conaninfo.txt converted to json form.
          */
         private CompletableFuture<String> searchPkg(final URI uri) {
-            final Matcher matcher = ConansEntity.SEARCH_PKG_PATH
+            final Matcher matcher = ConansEntity.SEARCH_BIN_PKG_PATH
                 .getPattern().matcher(uri.getPath());
             String uripath = "";
             if (matcher.matches()) {
@@ -443,8 +452,8 @@ public final class ConansEntity {
                             final CompletableFuture<String> conaninfo;
                             try {
                                 final JsonObjectBuilder jsonbuilder = Json.createObjectBuilder();
-                                final String pkghash = GetSearchPkg.extractHash(key, pkgpath);
-                                conaninfo = GetSearchPkg.pkgInfoToJson(
+                                final String pkghash = GetSearchBinPkg.extractHash(key, pkgpath);
+                                conaninfo = GetSearchBinPkg.pkgInfoToJson(
                                     content, jsonbuilder, pkghash
                                 );
                             } catch (final IOException exception) {
@@ -615,6 +624,93 @@ public final class ConansEntity {
                     return result;
                 }
             );
+        }
+    }
+
+    /**
+     * Conan /search REST APIs for package recipes.
+     * @since 0.1
+     */
+    public static final class GetSearchSrcPkg implements Slice {
+
+        /**
+         * Artipie storage.
+         */
+        private final Storage storage;
+
+        /**
+         * Ctor.
+         * @param storage Current Artipie storage instance.
+         */
+        public GetSearchSrcPkg(final Storage storage) {
+            this.storage = storage;
+        }
+
+        @Override
+        public Response response(final String line,
+            final Iterable<Map.Entry<String, String>> headers, final Publisher<ByteBuffer> body) {
+            final RequestLineFrom request = new RequestLineFrom(line);
+            return new AsyncResponse(CompletableFuture.supplyAsync(request::uri)
+                .thenCompose(uri -> this.searchRecipes(GetSearchSrcPkg.getQuestion(request)))
+                .thenCompose(
+                    result -> CompletableFuture.completedFuture(
+                        new RsWithHeaders(
+                            new RsWithBody(StandardRs.OK, result, StandardCharsets.UTF_8),
+                            ConansEntity.CONTENT_TYPE, ConansEntity.JSON_TYPE
+                        )
+                    )
+                )
+            );
+        }
+
+        /**
+         * Extracts question parameter from the query string.
+         * @param request Request line object with query string.
+         * @return Question ("q") parameter's value, as String.
+         */
+        private static String getQuestion(final RequestLineFrom request) {
+            String result = "";
+            final String[] query = request.uri().getQuery().split("=");
+            if (query.length == 2 && query[0].equals("q")) {
+                result = query[1];
+            }
+            return result;
+        }
+
+        /**
+         * Searching for Recipes and generating json string.
+         * @param question Search request string.
+         * @return Json string with array of matching recipes.
+         */
+        private CompletableFuture<String> searchRecipes(final String question) {
+            return this.storage.list(Key.ROOT).thenCompose(
+                keys -> {
+                    final Set<String> recipes = new HashSet<>();
+                    for (final Key key : keys) {
+                        final String str = key.string();
+                        final int start = str.indexOf(ConansEntity.PKG_SRC_DIR);
+                        if (start > 0) {
+                            String recipe = str.substring(0, start);
+                            final int extra = recipe.indexOf("/_/_");
+                            if (extra >= 0) {
+                                recipe = str.substring(0, extra);
+                            }
+                            if (recipe.contains(question)) {
+                                recipes.add(recipe);
+                            }
+                        }
+                    }
+                    final StringBuilder builder = new StringBuilder();
+                    for (final String str : recipes) {
+                        builder.append(String.format("\"%1$s\",", str));
+                    }
+                    return CompletableFuture.completedFuture(
+                        String.format(
+                            "{ results: [%1$s] }",
+                            builder.substring(0, builder.length() - 1).toString()
+                        )
+                    );
+                });
         }
     }
 }
