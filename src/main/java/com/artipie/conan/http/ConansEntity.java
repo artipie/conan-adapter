@@ -23,6 +23,7 @@
  */
 package com.artipie.conan.http;
 
+import com.artipie.asto.ArtipieIOException;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.ext.PublisherAs;
@@ -69,22 +70,22 @@ public final class ConansEntity {
     /**
      * Pattern for /download_urls request (package sources).
      */
-    public static final PathWrap DLOAD_SRC_PATH = new PathWrap.DownloadSrcPath();
+    public static final PathWrap DLOAD_SRC_PATH = new PathWrap.DownloadSrc();
 
     /**
      * Pattern for /download_urls request (package binary).
      */
-    public static final PathWrap DLOAD_BIN_PATH = new PathWrap.DownloadBinPath();
+    public static final PathWrap DLOAD_BIN_PATH = new PathWrap.DownloadBin();
 
     /**
      * Pattern for /search reqest (for package binaries).
      */
-    public static final PathWrap SEARCH_PKG_PATH = new PathWrap.SearchPkgPath();
+    public static final PathWrap SEARCH_PKG_PATH = new PathWrap.SearchPkg();
 
     /**
      * Pattern for package binary info by its hash.
      */
-    public static final PathWrap PKG_BIN_INFO_PATH = new PathWrap.PkgBinInfoPath();
+    public static final PathWrap PKG_BIN_INFO_PATH = new PathWrap.PkgBinInfo();
 
     /**
      * Protocol type for download URIs.
@@ -174,18 +175,12 @@ public final class ConansEntity {
         private final Storage storage;
 
         /**
-         * Current Artipie server instance hostname.
-         */
-        private String hostname;
-
-        /**
          * Ctor.
          *
          * @param storage Current Artipie storage instance.
          */
         public GetDownload(final Storage storage) {
             this.storage = storage;
-            this.hostname = "";
         }
 
         @Override
@@ -194,17 +189,13 @@ public final class ConansEntity {
             final Iterable<Map.Entry<String, String>> headers,
             final Publisher<ByteBuffer> body
         ) {
-            for (final Map.Entry<String, String> header : headers) {
-                if (header.getKey().equals("Host")) {
-                    this.hostname = header.getValue();
-                }
-            }
+            final String hostname = getHost(headers);
             return new AsyncResponse(
                 CompletableFuture.supplyAsync(new RequestLineFrom(line)::uri).thenCompose(
-                    uri -> this.getDownloadUriContent(uri).thenCompose(
-                        exist -> {
+                    uri -> this.getDownloadUriContent(uri, hostname).thenCompose(
+                        content -> {
                             final Response result;
-                            if (exist == null) {
+                            if (Strings.isNullOrEmpty(content)) {
                                 result = new RsWithBody(
                                     StandardRs.NOT_FOUND,
                                     String.format(ConansEntity.URI_S_NOT_FOUND, uri),
@@ -213,7 +204,7 @@ public final class ConansEntity {
                             } else {
                                 result = new RsWithHeaders(
                                     new RsWithBody(
-                                        StandardRs.OK, exist, StandardCharsets.UTF_8
+                                        StandardRs.OK, content, StandardCharsets.UTF_8
                                     ),
                                     ConansEntity.CONTENT_TYPE, ConansEntity.JSON_TYPE
                                 );
@@ -226,12 +217,29 @@ public final class ConansEntity {
         }
 
         /**
+         * Extracts host name for HTTP headers.
+         * @param headers Iterable of headers.
+         * @return Host name as String.
+         */
+        private static String getHost(final Iterable<Map.Entry<String, String>> headers) {
+            String hostname = "";
+            for (final Map.Entry<String, String> header : headers) {
+                if (header.getKey().equals("Host")) {
+                    hostname = header.getValue();
+                }
+            }
+            return hostname;
+        }
+
+        /**
          * Generates package files URIs for downloading.
          *
          * @param uri Conan package URI.
+         * @param hostname Host name or IP to generate download URLs.
          * @return Json data String in CompletableFuture with files URIs.
          */
-        private CompletableFuture<String> getDownloadUriContent(final URI uri) {
+        private CompletableFuture<String> getDownloadUriContent(final URI uri,
+            final String hostname) {
             Matcher urimatcher = ConansEntity.DLOAD_BIN_PATH.getPattern().matcher(uri.getPath());
             final String pkghash;
             final String uripath;
@@ -250,11 +258,12 @@ public final class ConansEntity {
                 packagefiles = ConansEntity.PKG_SRC_LIST;
                 pkghash = "";
             }
-            return this.generateUrlsData(Arrays.stream(packagefiles).map(
-                file -> {
-                    final Key key = GetDownload.getKey(uripath, pkghash, file);
-                    return new Tuple2<>(key, this.storage.exists(key));
-                }
+            return GetDownload.generateUrlsData(
+                hostname, Arrays.stream(packagefiles).map(
+                    file -> {
+                        final Key key = GetDownload.getKey(uripath, pkghash, file);
+                        return new Tuple2<>(key, this.storage.exists(key));
+                    }
                 ).collect(Collectors.toList())
             );
         }
@@ -283,25 +292,31 @@ public final class ConansEntity {
 
         /**
          * Generates URIs Json for given storage Keys list.
+         * @param hostname Host name or IP to generate download URLs.
          * @param keychecks Collection of Pairs of Key + existence checks.
          * @return Json data String in CompletableFuture with files URIs.
          */
-        private CompletableFuture<String> generateUrlsData(
+        private static CompletableFuture<String> generateUrlsData(final String hostname,
             final List<Tuple2<Key, CompletableFuture<Boolean>>> keychecks
         ) {
             return CompletableFuture.allOf(
                 keychecks.stream().map(Tuple2::_2).toArray(CompletableFuture[]::new)
             ).thenCompose(
                 unused -> {
-                    final StringBuilder result = keychecks.stream().filter(t -> t._2().join())
-                        .map(t -> new Tuple2<>(t._1().string(), t._1().string().split("/"))).map(
-                            t -> String.format(
-                                "\"%1$s\":\"%2$s%3$s/%4$s\",", t._2()[t._2().length - 1],
-                                ConansEntity.PROTOCOL, this.hostname, t._1()
-                            )
-                        ).collect(
-                            StringBuilder::new, StringBuilder::append, (ignored1, ignored2) -> {
-                            });
+                    final StringBuilder result = keychecks.stream().filter(
+                        tuple -> tuple._2().join()
+                    ).map(
+                        tuple -> new Tuple2<>(
+                            tuple._1().string(), tuple._1().string().split("/")
+                        )
+                    ).map(
+                        t -> String.format(
+                            "\"%1$s\":\"%2$s%3$s/%4$s\",", t._2()[t._2().length - 1],
+                            ConansEntity.PROTOCOL, hostname, t._1()
+                        )
+                    ).collect(
+                        StringBuilder::new, StringBuilder::append, (ignored1, ignored2) -> {
+                        });
                     return CompletableFuture.completedFuture(
                         String.join(
                             "", "{",
@@ -342,7 +357,7 @@ public final class ConansEntity {
                     uri -> this.searchPkg(uri).thenCompose(
                         pkginfo -> {
                             final Response result;
-                            if (pkginfo == null) {
+                            if (Strings.isNullOrEmpty(pkginfo)) {
                                 result = new RsWithBody(
                                     StandardRs.NOT_FOUND,
                                     String.format(ConansEntity.URI_S_NOT_FOUND, uri),
@@ -404,7 +419,7 @@ public final class ConansEntity {
         private CompletableFuture<String> searchPkg(final URI uri) {
             final Matcher matcher = ConansEntity.SEARCH_PKG_PATH
                 .getPattern().matcher(uri.getPath());
-            String uripath = null;
+            String uripath = "";
             if (matcher.matches()) {
                 uripath = matcher.group(ConansEntity.URI_PATH);
             }
@@ -426,14 +441,14 @@ public final class ConansEntity {
                 .filter(key -> key.string().endsWith(ConansEntity.CONAN_INFO)).map(
                     key -> this.storage.value(key).thenApply(
                         content -> {
-                            String conaninfo;
+                            final String conaninfo;
                             try {
                                 final JsonObjectBuilder jsonbuilder = Json.createObjectBuilder();
                                 final String pkghash = GetSearchPkg.extractHash(key, pkgpath);
                                 GetSearchPkg.pkgInfoToJson(content, jsonbuilder, pkghash);
                                 conaninfo = jsonbuilder.build().toString();
                             } catch (final IOException exception) {
-                                conaninfo = "";
+                                throw new ArtipieIOException(exception);
                             }
                             return conaninfo;
                         }
@@ -489,7 +504,7 @@ public final class ConansEntity {
                     uri -> this.getPkgInfoJson(uri).thenCompose(
                         pkginfo -> {
                             final Response result;
-                            if (pkginfo == null) {
+                            if (Strings.isNullOrEmpty(pkginfo)) {
                                 result = new RsWithBody(
                                     StandardRs.NOT_FOUND,
                                     String.format(ConansEntity.URI_S_NOT_FOUND, uri),
@@ -552,8 +567,8 @@ public final class ConansEntity {
                 uripath = matcher.group(ConansEntity.URI_PATH);
                 hash = matcher.group(ConansEntity.URI_HASH);
             } else {
-                uripath = null;
-                hash = null;
+                uripath = "";
+                hash = "";
             }
             return GetPkgInfo.generateJson(Arrays.stream(ConansEntity.PKG_BIN_LIST).map(
                 name -> {

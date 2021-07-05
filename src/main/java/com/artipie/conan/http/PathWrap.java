@@ -69,11 +69,11 @@ public abstract class PathWrap {
      * Request path for /download_urls request (package sources).
      * @since 0.1
      */
-    public static final class DownloadSrcPath extends PathWrap {
+    public static final class DownloadSrc extends PathWrap {
         /**
          * Ctor.
          */
-        protected DownloadSrcPath() {
+        protected DownloadSrc() {
             super("^/v1/conans/(?<path>.*)/download_urls$");
         }
     }
@@ -82,11 +82,11 @@ public abstract class PathWrap {
      * Request path for /download_urls request (package binary).
      * @since 0.1
      */
-    public static final class DownloadBinPath extends PathWrap {
+    public static final class DownloadBin extends PathWrap {
         /**
          * Ctor.
          */
-        protected DownloadBinPath() {
+        protected DownloadBin() {
             super("^/v1/conans/(?<path>.*)/packages/(?<hash>[0-9,a-f]*)/download_urls$");
         }
     }
@@ -95,11 +95,11 @@ public abstract class PathWrap {
      * Request path for /search reqest (for package binaries).
      * @since 0.1
      */
-    public static final class SearchPkgPath extends PathWrap {
+    public static final class SearchPkg extends PathWrap {
         /**
          * Ctor.
          */
-        protected SearchPkgPath() {
+        protected SearchPkg() {
             super("^/v1/conans/(?<path>.*)/search$");
         }
     }
@@ -108,11 +108,11 @@ public abstract class PathWrap {
      * Request path for package binary info by its hash.
      * @since 0.1
      */
-    public static final class PkgBinInfoPath extends PathWrap {
+    public static final class PkgBinInfo extends PathWrap {
         /**
          * Ctor.
          */
-        protected PkgBinInfoPath() {
+        protected PkgBinInfo() {
             super("^/v1/conans/(?<path>.*)/packages/(?<hash>[0-9,a-f]*)$");
         }
     }
