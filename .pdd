@@ -1,0 +1,5 @@
+--source=.
+--verbose
+--exclude target/**/*
+--exclude src/test/resources/**/*
+--exclude .idea/**/*
