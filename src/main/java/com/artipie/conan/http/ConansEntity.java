@@ -31,6 +31,7 @@ import com.artipie.http.Response;
 import com.artipie.http.Slice;
 import com.artipie.http.async.AsyncResponse;
 import com.artipie.http.rq.RequestLineFrom;
+import com.artipie.http.rq.RqHeaders;
 import com.artipie.http.rs.RsWithBody;
 import com.artipie.http.rs.RsWithHeaders;
 import com.artipie.http.rs.StandardRs;
@@ -189,7 +190,7 @@ public final class ConansEntity {
             final Iterable<Map.Entry<String, String>> headers,
             final Publisher<ByteBuffer> body
         ) {
-            final String hostname = getHost(headers);
+            final String hostname = new RqHeaders.Single(headers, "Host").asString();
             return new AsyncResponse(
                 CompletableFuture.supplyAsync(new RequestLineFrom(line)::uri).thenCompose(
                     uri -> this.getDownloadUriContent(uri, hostname).thenCompose(
@@ -214,21 +215,6 @@ public final class ConansEntity {
                     )
                 )
             );
-        }
-
-        /**
-         * Extracts host name for HTTP headers.
-         * @param headers Iterable of headers.
-         * @return Host name as String.
-         */
-        private static String getHost(final Iterable<Map.Entry<String, String>> headers) {
-            String hostname = "";
-            for (final Map.Entry<String, String> header : headers) {
-                if (header.getKey().equals("Host")) {
-                    hostname = header.getValue();
-                }
-            }
-            return hostname;
         }
 
         /**
@@ -383,31 +369,44 @@ public final class ConansEntity {
          * @param content Conan conaninfo.txt contents.
          * @param jsonbuilder Target to fill with json data.
          * @param pkghash Conan package hash value.
+         * @return CompletableFuture, providing json String with package info.
          * @throws IOException In case of conaninfo.txt contents access problems.
          */
-        private static void pkgInfoToJson(
+        private static CompletableFuture<String> pkgInfoToJson(
             final com.artipie.asto.Content content,
             final JsonObjectBuilder jsonbuilder,
             final String pkghash
         ) throws IOException {
-            final Wini conaninfo = new Wini(
-                new StringReader(new PublisherAs(content)
-                    .string(StandardCharsets.UTF_8).toCompletableFuture().join()
-                ));
-            final JsonObjectBuilder pkgbuilder = Json.createObjectBuilder();
-            conaninfo.forEach(
-                (secname, section) -> {
-                    final JsonObjectBuilder jsection = section.entrySet().stream()
-                        .filter(e -> e.getValue() != null).collect(
-                            Json::createObjectBuilder, (js, e) -> js.add(e.getKey(), e.getValue()),
-                            (js1, js2) -> { }
-                        );
-                    pkgbuilder.add(secname, jsection);
-                });
-            final String hashfield = "recipe_hash";
-            final String hashvalue = conaninfo.get(hashfield).keySet().iterator().next();
-            pkgbuilder.add(hashfield, hashvalue);
-            jsonbuilder.add(pkghash, pkgbuilder);
+            final CompletableFuture<String> result = new PublisherAs(content)
+                .string(StandardCharsets.UTF_8).thenCompose(
+                    data -> {
+                        final Wini conaninfo;
+                        try {
+                            conaninfo = new Wini(new StringReader(data));
+                        } catch (final IOException exception) {
+                            throw new ArtipieIOException(exception);
+                        }
+                        final JsonObjectBuilder pkgbuilder = Json.createObjectBuilder();
+                        conaninfo.forEach(
+                            (secname, section) -> {
+                                final JsonObjectBuilder jsection = section.entrySet().stream()
+                                    .filter(e -> e.getValue() != null).collect(
+                                        Json::createObjectBuilder, (js, e) ->
+                                            js.add(e.getKey(), e.getValue()),
+                                        (js1, js2) -> {
+                                        }
+                                    );
+                                pkgbuilder.add(secname, jsection);
+                            });
+                        final String hashfield = "recipe_hash";
+                        final String hashvalue = conaninfo.get(hashfield).keySet()
+                            .iterator().next();
+                        pkgbuilder.add(hashfield, hashvalue);
+                        jsonbuilder.add(pkghash, pkgbuilder);
+                        final String res = jsonbuilder.build().toString();
+                        return CompletableFuture.completedFuture(res);
+                    }).toCompletableFuture();
+            return result;
         }
 
         /**
@@ -439,14 +438,15 @@ public final class ConansEntity {
             final String pkgpath) {
             final Optional<CompletableFuture<String>> result = keys.stream()
                 .filter(key -> key.string().endsWith(ConansEntity.CONAN_INFO)).map(
-                    key -> this.storage.value(key).thenApply(
+                    key -> this.storage.value(key).thenCompose(
                         content -> {
-                            final String conaninfo;
+                            final CompletableFuture<String> conaninfo;
                             try {
                                 final JsonObjectBuilder jsonbuilder = Json.createObjectBuilder();
                                 final String pkghash = GetSearchPkg.extractHash(key, pkgpath);
-                                GetSearchPkg.pkgInfoToJson(content, jsonbuilder, pkghash);
-                                conaninfo = jsonbuilder.build().toString();
+                                conaninfo = GetSearchPkg.pkgInfoToJson(
+                                    content, jsonbuilder, pkghash
+                                );
                             } catch (final IOException exception) {
                                 throw new ArtipieIOException(exception);
                             }
@@ -595,19 +595,19 @@ public final class ConansEntity {
                     final CompletableFuture<String> result;
                     if (exist) {
                         result = this.storage.value(key).thenCompose(
-                            content -> {
-                                String hashstr;
-                                try {
-                                    final byte[] data = new PublisherAs(content)
-                                        .bytes().toCompletableFuture().join();
-                                    final MessageDigest mdg = MessageDigest.getInstance("MD5");
-                                    final int hex = 16;
-                                    hashstr = new BigInteger(1, mdg.digest(data)).toString(hex);
-                                } catch (final NoSuchAlgorithmException exception) {
-                                    hashstr = "";
-                                }
-                                return CompletableFuture.completedFuture(hashstr);
-                            }
+                            content -> new PublisherAs(content).bytes().thenCompose(
+                                data -> {
+                                    String hashstr;
+                                    try {
+                                        final MessageDigest mdg = MessageDigest.getInstance("MD5");
+                                        final int hex = 16;
+                                        hashstr = new BigInteger(1, mdg.digest(data))
+                                            .toString(hex);
+                                    } catch (final NoSuchAlgorithmException exception) {
+                                        hashstr = "";
+                                    }
+                                    return CompletableFuture.completedFuture(hashstr);
+                                })
                         );
                     } else {
                         result = CompletableFuture.completedFuture(null);
