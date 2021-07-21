@@ -112,5 +112,14 @@ This is the dependency you need:
 
 ## How to configure and start Artipie Conan endpoint
 
+## How to switch Conan to V2 API
 
+Conan client uses V1 API by default, as its more stable. Anyway, both V1 and V2 APIs aren't public, so they could change. The conan_server supports both APIs by default.
+Switching to V2 API on client:
+```
+nano ~/.conan/conan.conf
+
+[general]
++revisions_enabled = True
+```
 
