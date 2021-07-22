@@ -46,6 +46,7 @@ import com.artipie.http.slice.SliceSimple;
  * Artipie {@link Slice} for Conan repository HTTP API.
  * @since 0.1
  * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
+ * @checkstyle ClassFanOutComplexityCheck (500 lines)
  */
 public final class ConanSlice extends Slice.Wrap {
 
@@ -59,11 +60,11 @@ public final class ConanSlice extends Slice.Wrap {
 
     /**
      * Ctor.
-     *
      * @param storage Storage object.
      * @param perms Permissions.
      * @param auth Authentication parameters.
      */
+    @SuppressWarnings("PMD.ExcessiveMethodLength")
     public ConanSlice(
         final Storage storage,
         final Permissions perms,
@@ -76,7 +77,10 @@ public final class ConanSlice extends Slice.Wrap {
                     new SliceSimple(
                         new RsWithHeaders(
                             new RsWithStatus(RsStatus.ACCEPTED),
-                            new Headers.From("X-Conan-Server-Capabilities", "")
+                            new Headers.From(
+                                "X-Conan-Server-Capabilities",
+                                "complex_search,revisions,revisions"
+                            )
                         )
                     )
                 ),
@@ -117,6 +121,72 @@ public final class ConanSlice extends Slice.Wrap {
                     ),
                     new BasicAuthSlice(
                         new ConansEntity.GetPkgInfo(storage),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.READ)
+                    )
+                ),
+                new RtRulePath(
+                    new RtRule.All(
+                        new RtRule.ByPath(new PathWrap.PkgBinLatest().getPath()),
+                        ByMethodsRule.Standard.GET
+                    ),
+                    new BasicAuthSlice(
+                        new ConansEntityV2.PkgBinLatest(storage),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.READ)
+                    )
+                ),
+                new RtRulePath(
+                    new RtRule.All(
+                        new RtRule.ByPath(new PathWrap.PkgSrcLatest().getPath()),
+                        ByMethodsRule.Standard.GET
+                    ),
+                    new BasicAuthSlice(
+                        new ConansEntityV2.PkgSrcLatest(storage),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.READ)
+                    )
+                ),
+                new RtRulePath(
+                    new RtRule.All(
+                        new RtRule.ByPath(new PathWrap.PkgBinFile().getPath()),
+                        ByMethodsRule.Standard.GET
+                    ),
+                    new BasicAuthSlice(
+                        new ConansEntityV2.PkgBinFile(storage),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.READ)
+                    )
+                ),
+                new RtRulePath(
+                    new RtRule.All(
+                        new RtRule.ByPath(new PathWrap.PkgBinFiles().getPath()),
+                        ByMethodsRule.Standard.GET
+                    ),
+                    new BasicAuthSlice(
+                        new ConansEntityV2.PkgBinFiles(storage),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.READ)
+                    )
+                ),
+                new RtRulePath(
+                    new RtRule.All(
+                        new RtRule.ByPath(new PathWrap.PkgSrcFile().getPath()),
+                        ByMethodsRule.Standard.GET
+                    ),
+                    new BasicAuthSlice(
+                        new ConansEntityV2.PkgSrcFile(storage),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.READ)
+                    )
+                ),
+                new RtRulePath(
+                    new RtRule.All(
+                        new RtRule.ByPath(new PathWrap.PkgSrcFiles().getPath()),
+                        ByMethodsRule.Standard.GET
+                    ),
+                    new BasicAuthSlice(
+                        new ConansEntityV2.PkgSrcFiles(storage),
                         auth,
                         new Permission.ByName(perms, Action.Standard.READ)
                     )

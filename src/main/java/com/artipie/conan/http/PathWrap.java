@@ -129,4 +129,86 @@ public abstract class PathWrap {
             super("^/v1/conans/search$");
         }
     }
+
+    /**
+     * Request path for Conan V2 latest revision info request (package sources).
+     * @since 0.1
+     */
+    public static final class PkgSrcLatest extends PathWrap {
+        /**
+         * Ctor.
+         */
+        protected PkgSrcLatest() {
+            super("^/v2/conans/(?<path>.*)/latest$");
+        }
+    }
+
+    /**
+     * Request path for V2 package binary latest revision info by its hash.
+     * @since 0.1
+     */
+    public static final class PkgBinLatest extends PathWrap {
+        /**
+         * Ctor.
+         * @checkstyle LineLengthCheck (5 lines)
+         */
+        protected PkgBinLatest() {
+            super("^/v2/conans/(?<path>.*)/revisions/(?<rev>[0-9]*)/packages/(?<hash>[0-9,a-f]*)/latest$");
+        }
+    }
+
+    /**
+     * Request path for V2 /files request for recipe files list (package sources).
+     * @since 0.1
+     */
+    public static final class PkgSrcFiles extends PathWrap {
+        /**
+         * Ctor.
+         */
+        protected PkgSrcFiles() {
+            super("^/v2/conans/(?<path>.*)/revisions/(?<rev>[0-9]*)/files$");
+        }
+    }
+
+    /**
+     * Request path for V2 files/>file< request for package recipe.
+     * @since 0.1
+     */
+    public static final class PkgSrcFile extends PathWrap {
+        /**
+         * Ctor.
+         */
+        protected PkgSrcFile() {
+            super("^/v2/conans/(?<path>.*)/revisions/(?<rev>[0-9]*)/files/(?<file>.*)$");
+        }
+    }
+
+    /**
+     * Request path for package binary files list by its hash.
+     * @since 0.1
+     */
+    public static final class PkgBinFiles extends PathWrap {
+        /**
+         * Ctor.
+         * @checkstyle LineLengthCheck (5 lines)
+         */
+        protected PkgBinFiles() {
+            super("^/v2/conans/(?<path>.*)/revisions/(?<rev>[0-9]*)/packages/(?<hash>[0-9,a-f]*)/revisions/(?<rev2>[0-9]*)/files$");
+        }
+    }
+
+    /**
+     * Request path for downloading Conan package binary files.
+     * @since 0.1
+     */
+    public static final class PkgBinFile extends PathWrap {
+        /**
+         * Ctor.
+         * @checkstyle LineLengthCheck (5 lines)
+         */
+        @SuppressWarnings("LineLengthCheck")
+        protected PkgBinFile() {
+            super("^/v2/conans/(?<path>.*)/revisions/(?<rev>[0-9]*)/packages/(?<hash>[0-9,a-f]*)/revisions/(?<rev2>[0-9]*)/files/(?<file>.*)$");
+        }
+    }
 }
