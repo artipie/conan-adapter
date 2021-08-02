@@ -29,16 +29,18 @@ import com.artipie.asto.Storage;
 import com.artipie.asto.ext.PublisherAs;
 import com.artipie.asto.lock.Lock;
 import com.artipie.asto.lock.storage.StorageLock;
+import hu.akarnokd.rxjava2.interop.FlowableInterop;
+import hu.akarnokd.rxjava2.interop.SingleInterop;
+import io.reactivex.Flowable;
+import io.reactivex.schedulers.Schedulers;
 import io.vavr.Tuple2;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -66,10 +68,22 @@ public final class RevisionsIndex {
     private static final String CONAN_MANIFEST = "conanmanifest.txt";
 
     /**
+     * File with binary package information on corresponding build configuration.
+     */
+    private static final String CONAN_INFO = "conaninfo.txt";
+
+    /**
      * Main files of package recipe.
      */
     private static final String[] PKG_SRC_LIST = {
         RevisionsIndex.CONAN_MANIFEST, "conan_export.tgz", "conanfile.py", "conan_sources.tgz",
+    };
+
+    /**
+     * Main files of package binary.
+     */
+    private static final String[] PKG_BIN_LIST = {
+        RevisionsIndex.CONAN_MANIFEST, RevisionsIndex.CONAN_INFO, "conan_package.tgz",
     };
 
     /**
@@ -91,6 +105,11 @@ public final class RevisionsIndex {
      * Revisions index file name.
      */
     private static final String INDEX_FILE = "revisions.txt";
+
+    /**
+     * Package binaries subdir name.
+     */
+    private static final String PKG_SUBDIR = "package";
 
     /**
      * Current Artipie storage instance.
@@ -157,7 +176,7 @@ public final class RevisionsIndex {
     }
 
     /**
-     * Updates recipe index file, non recursive, doesnt' affect package binaries.
+     * Updates recipe index file, non recursive, doesn't affect package binaries.
      * @return CompletableFuture with recipe revisions list.
      */
     @SuppressWarnings("unchecked")
@@ -215,6 +234,134 @@ public final class RevisionsIndex {
                 return revs;
             }
         );
+    }
+
+    /**
+     * Returns last (max) revision number for binary revision index.
+     * @param reciperev Recipe revision number.
+     * @param hash Target package binary hash.
+     * @return CompletableFuture with recipe revision as Integer.
+     */
+    public CompletableFuture<Integer> getLastBinaryRevision(final String reciperev,
+        final String hash) {
+        final String path = this.getBinaryRevpath(reciperev, hash);
+        return this.getLastRev(path);
+    }
+
+    /**
+     * Creates path to the binary revisions file. Should be private later.
+     * @param reciperev Recipe revision number.
+     * @param hash Target package binary hash.
+     * @return Binary revisions index file in the storage, as String.
+     */
+    public String getBinaryRevpath(final String reciperev, final String hash) {
+        return String.join(
+            "", this.prefix.string(), this.pkg, "/", reciperev, "/",
+            RevisionsIndex.PKG_SUBDIR, "/", hash, "/", RevisionsIndex.INDEX_FILE
+        );
+    }
+
+    /**
+     * Updates binary index file.(WIP).
+     * @param revision Recipe revision number.
+     * @param hash Target package binary hash.
+     * @return CompletableFuture with recipe revisions list.
+     */
+    public CompletableFuture<List<String>> updateBinaryIndex(final String revision,
+        final String hash) {
+        final String path = String.join(
+            "", this.prefix.string(), this.pkg, "/", revision,
+            "/", RevisionsIndex.PKG_SUBDIR, "/", hash
+        );
+        return this.buildIndex(path, RevisionsIndex.PKG_BIN_LIST);
+    }
+
+    /**
+     * Updates binary index file. Fully recursive (WIP).
+     * Does updateRecipeIndex(), then for each revision & for each pkg binary updateBinaryIndex().
+     * @return CompletionStage to handle operation completion.
+     */
+    public CompletionStage<Void> fullIndexUpdate() {
+        final String path = String.join("", this.prefix.string(), this.pkg);
+        return this.doWithLock(
+            new Key.From(path), () -> {
+                final Flowable<List<String>> flowable = SingleInterop.fromFuture(
+                    this.buildIndex(path, RevisionsIndex.PKG_SRC_LIST)
+                ).flatMapPublisher(Flowable::fromIterable).flatMap(
+                    rev -> {
+                        final String packages = String.join(
+                            "", path, "/", rev, "/", RevisionsIndex.PKG_SUBDIR
+                        );
+                        return SingleInterop.fromFuture(
+                            this.storage.list(new Key.From(packages))
+                                .thenCompose(
+                                    files -> CompletableFuture.completedFuture(
+                                        files.stream().map(file -> getNextSubdir(path, file))
+                                            .filter(s -> s.length() > 0).collect(Collectors.toSet())
+                                    )
+                                )
+                            )
+                            .flatMapPublisher(Flowable::fromIterable);
+                    })
+                    .flatMap(
+                        pkgpath -> FlowableInterop.fromFuture(
+                            this.buildIndex(pkgpath, RevisionsIndex.PKG_BIN_LIST)
+                        )
+                    )
+                    .parallel().runOn(Schedulers.io())
+                    .sequential().observeOn(Schedulers.io());
+                return fromFlowable(flowable).thenCompose(
+                    unused ->
+                        CompletableFuture.completedFuture(null)
+                );
+            }
+        );
+    }
+
+    /**
+     * Removes specified revison from index file of package binary.
+     * @param reciperev Recipe revision number.
+     * @param hash Target package binary hash.
+     * @param revision Revision number of the binary.
+     * @return CompletionStage with boolean == true if recipe & revision were found.
+     */
+    public CompletionStage<Boolean> removeBinaryRevision(final String reciperev, final String hash,
+        final Integer revision) {
+        final String path = this.getBinaryRevpath(reciperev, hash);
+        return this.removeRevision(revision, path);
+    }
+
+    /**
+     * Returns binary packages list (of hashes) for given recipe revision.
+     * @param revision Revision number of the recipe.
+     * @return CompletionStage with the list of package binaries (hashes) as strings.
+     */
+    public CompletionStage<List<String>> getPackageList(final Integer revision) {
+        final String path = String.join(
+            "", this.prefix.string(), this.pkg, "/", revision.toString(), "/",
+            RevisionsIndex.PKG_SUBDIR
+        );
+        return this.storage.list(new Key.From(path)).thenCompose(
+            keys -> CompletableFuture.completedFuture(
+                new ArrayList<>(
+                    keys.stream().map(key -> RevisionsIndex.getNextSubdir(path, key))
+                        .filter(s -> s.length() > 0).collect(Collectors.toSet())
+                )
+            )
+        );
+    }
+
+    /**
+     * Add binary revision to the index.
+     * @param reciperev Recipe revision number.
+     * @param hash Package binary hash.
+     * @param revision Package binary revision.
+     * @return CompletionStage to handle operation completion.
+     */
+    public CompletionStage<Void> addBinaryRevision(final String reciperev, final String hash,
+        final Integer revision) {
+        final String path = this.getBinaryRevpath(reciperev, hash);
+        return this.addToRevdata(revision, path);
     }
 
     /**
@@ -299,6 +446,19 @@ public final class RevisionsIndex {
                 }
                 return CompletableFuture.completedFuture(revision);
             });
+    }
+
+    /**
+     * Creates java's CompletableFuture from reactivex's Flowable.
+     * @param flowable Flowable object to wrap.
+     * @param <T> The type of the items for Flowable/CompletableFuture.
+     * @return CompletableFuture instance, which wraps flowable and provides its results.
+     */
+    private static <T> CompletableFuture<List<T>> fromFlowable(final Flowable<T> flowable) {
+        final CompletableFuture<List<T>> future = new CompletableFuture<>();
+        flowable.doOnError(future::completeExceptionally).toList()
+            .toObservable().forEach(future::complete);
+        return future;
     }
 
     /**
@@ -430,10 +590,8 @@ public final class RevisionsIndex {
      * @return JsonObject with revision info.
      */
     private static JsonObject newRevision(final Integer revision) {
-        final String timestamp = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss", Locale.ENGLISH)
-            .format(new Date());
         return Json.createObjectBuilder().add(RevisionsIndex.REVISION, revision.toString())
-            .add(RevisionsIndex.TIMESTAMP, timestamp).build();
+            .add(RevisionsIndex.TIMESTAMP, Instant.now().toString()).build();
     }
 
     /**
