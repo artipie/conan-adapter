@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import javax.json.Json;
@@ -97,7 +98,7 @@ public final class RevisionsIndex {
     private static final String REVISION = "revision";
 
     /**
-     * Timestamp json field.
+     * Timestamp json field. Uses ISO 8601 format.
      */
     private static final String TIMESTAMP = "timestamp";
 
@@ -107,9 +108,14 @@ public final class RevisionsIndex {
     private static final String INDEX_FILE = "revisions.txt";
 
     /**
+     * Package recipe (sources) subdir name.
+     */
+    private static final String SRC_SUBDIR = "export";
+
+    /**
      * Package binaries subdir name.
      */
-    private static final String PKG_SUBDIR = "package";
+    private static final String BIN_SUBDIR = "package";
 
     /**
      * Current Artipie storage instance.
@@ -166,6 +172,26 @@ public final class RevisionsIndex {
     }
 
     /**
+     * Returns list of revisions for the package binary.
+     * @param reciperev Recipe revision number.
+     * @param hash Target package binary hash.
+     * @return CompletionStage with the list.
+     */
+    public CompletionStage<List<Integer>> getBinaryRevisions(final String reciperev,
+        final String hash) {
+        final String path = this.getBinaryRevpath(reciperev, hash);
+        return this.loadRevisionData(new Key.From(path))
+            .thenCompose(
+                array -> {
+                    final List<Integer> revs = array.stream().map(
+                        value -> Integer.parseInt(
+                            RevisionsIndex.getJsonStr(value, RevisionsIndex.REVISION)
+                        )).collect(Collectors.toList());
+                    return CompletableFuture.completedFuture(revs);
+                });
+    }
+
+    /**
      * Removes specified revison from index file of package recipe.
      * @param revision Revision number.
      * @return CompletionStage with boolean == true if recipe & revision were found.
@@ -180,10 +206,14 @@ public final class RevisionsIndex {
      * @return CompletableFuture with recipe revisions list.
      */
     @SuppressWarnings("unchecked")
-    public CompletableFuture<List<String>> updateRecipeIndex() {
+    public CompletionStage<List<String>> updateRecipeIndex() {
         final String path = String.join("", this.prefix.string(), this.pkg);
         return this.doWithLock(
-            new Key.From(path), () -> this.buildIndex(path, RevisionsIndex.PKG_SRC_LIST)
+            new Key.From(path), () -> this.buildIndex(
+                path, RevisionsIndex.PKG_SRC_LIST, (name, rev) -> String.join(
+                    "", path, "/", rev, "/", RevisionsIndex.SRC_SUBDIR, "/", name
+                )
+            )
         );
     }
 
@@ -257,7 +287,7 @@ public final class RevisionsIndex {
     public String getBinaryRevpath(final String reciperev, final String hash) {
         return String.join(
             "", this.prefix.string(), this.pkg, "/", reciperev, "/",
-            RevisionsIndex.PKG_SUBDIR, "/", hash, "/", RevisionsIndex.INDEX_FILE
+            RevisionsIndex.BIN_SUBDIR, "/", hash, "/", RevisionsIndex.INDEX_FILE
         );
     }
 
@@ -267,13 +297,17 @@ public final class RevisionsIndex {
      * @param hash Target package binary hash.
      * @return CompletableFuture with recipe revisions list.
      */
-    public CompletableFuture<List<String>> updateBinaryIndex(final String revision,
+    public CompletionStage<List<String>> updateBinaryIndex(final String revision,
         final String hash) {
         final String path = String.join(
             "", this.prefix.string(), this.pkg, "/", revision,
-            "/", RevisionsIndex.PKG_SUBDIR, "/", hash
+            "/", RevisionsIndex.BIN_SUBDIR, "/", hash
         );
-        return this.buildIndex(path, RevisionsIndex.PKG_BIN_LIST);
+        return this.buildIndex(
+            path, RevisionsIndex.PKG_BIN_LIST, (name, rev) -> String.join(
+                "", path, "/", rev, "/", name
+            )
+        );
     }
 
     /**
@@ -286,26 +320,36 @@ public final class RevisionsIndex {
         return this.doWithLock(
             new Key.From(path), () -> {
                 final Flowable<List<String>> flowable = SingleInterop.fromFuture(
-                    this.buildIndex(path, RevisionsIndex.PKG_SRC_LIST)
-                ).flatMapPublisher(Flowable::fromIterable).flatMap(
-                    rev -> {
-                        final String packages = String.join(
-                            "", path, "/", rev, "/", RevisionsIndex.PKG_SUBDIR
-                        );
-                        return SingleInterop.fromFuture(
-                            this.storage.list(new Key.From(packages))
-                                .thenCompose(
-                                    files -> CompletableFuture.completedFuture(
-                                        files.stream().map(file -> getNextSubdir(path, file))
-                                            .filter(s -> s.length() > 0).collect(Collectors.toSet())
+                    this.buildIndex(
+                        path, RevisionsIndex.PKG_SRC_LIST, (name, rev) -> String.join(
+                            "", path, "/", rev, "/",
+                            RevisionsIndex.SRC_SUBDIR, "/", name
+                        )
+                    )).flatMapPublisher(Flowable::fromIterable).flatMap(
+                        rev -> {
+                            final String packages = String.join(
+                                "", path, "/", rev, "/", RevisionsIndex.BIN_SUBDIR
+                            );
+                            return SingleInterop.fromFuture(
+                                this.storage.list(new Key.From(packages))
+                                    .thenCompose(
+                                        files -> CompletableFuture.completedFuture(
+                                            files.stream().map(
+                                                    file -> RevisionsIndex.getNextPath(
+                                                        packages, file
+                                                    )
+                                                )
+                                                .filter(s -> s.length() > 0)
+                                                .collect(Collectors.toSet())
+                                        )
                                     )
-                                )
+                            ).flatMapPublisher(Flowable::fromIterable);
+                        }).flatMap(
+                            pkgpath -> FlowableInterop.fromFuture(
+                            this.buildIndex(
+                                pkgpath, RevisionsIndex.PKG_BIN_LIST, (name, rev) ->
+                                    String.join("", pkgpath, "/", rev, "/", name)
                             )
-                            .flatMapPublisher(Flowable::fromIterable);
-                    })
-                    .flatMap(
-                        pkgpath -> FlowableInterop.fromFuture(
-                            this.buildIndex(pkgpath, RevisionsIndex.PKG_BIN_LIST)
                         )
                     )
                     .parallel().runOn(Schedulers.io())
@@ -339,7 +383,7 @@ public final class RevisionsIndex {
     public CompletionStage<List<String>> getPackageList(final Integer revision) {
         final String path = String.join(
             "", this.prefix.string(), this.pkg, "/", revision.toString(), "/",
-            RevisionsIndex.PKG_SUBDIR
+            RevisionsIndex.BIN_SUBDIR
         );
         return this.storage.list(new Key.From(path)).thenCompose(
             keys -> CompletableFuture.completedFuture(
@@ -368,31 +412,27 @@ public final class RevisionsIndex {
      * Rebuilds specified revision index (WIP).
      * @param path Index file path.
      * @param pkgfiles Package files list for verification.
+     * @param generator Generates full path to one of the pkgfiles. (name, rev) -> path.
      * @return CompletableFuture with recipe revisions list.
      */
     @SuppressWarnings("PMD.UseVarargs")
-    private CompletableFuture<List<String>> buildIndex(final String path,
-        final String[] pkgfiles) {
+    private CompletableFuture<List<String>> buildIndex(final String path, final String[] pkgfiles,
+        final BiFunction<String, String, String> generator) {
         final CompletableFuture<List<String>> list = this.storage.list(new Key.From(path))
             .thenCompose(
                 keys -> {
                     final List<CompletableFuture<Tuple2<String, Boolean>>> revs =
                         keys.stream().map(key -> RevisionsIndex.getNextSubdir(path, key))
-                            .filter(s -> s.length() > 0)
-                            .collect(Collectors.toSet()).stream().map(
+                            .filter(s -> s.length() > 0).collect(Collectors.toSet()).stream().map(
                                 rev -> {
                                     final List<CompletableFuture<Boolean>> checks =
                                         Arrays.stream(pkgfiles).map(
-                                            name -> {
-                                                final String fullpath = String.join(
-                                                    "", path, "/", rev, "/", name
-                                                );
-                                                return this.storage.exists(new Key.From(fullpath));
-                                            }).collect(Collectors.toList());
+                                            name -> this.storage.exists(
+                                                new Key.From(generator.apply(name, rev))
+                                            )
+                                        ).collect(Collectors.toList());
                                     @SuppressWarnings("rawtypes") final CompletableFuture[] arr =
-                                        checks.toArray(
-                                        new CompletableFuture[0]
-                                    );
+                                        checks.toArray(new CompletableFuture[0]);
                                     return CompletableFuture.allOf(arr).thenApply(
                                         nothing -> new Tuple2<>(
                                             rev, checks.stream().allMatch(CompletableFuture::join)
@@ -560,6 +600,17 @@ public final class RevisionsIndex {
     }
 
     /**
+     * Generates base path + next subdir name from key.
+     * @param base Base path for key.
+     * @param key Artipie storage key with full path.
+     * @return Base + next subdir in key, or empty string if none.
+     */
+    private static String getNextPath(final String base, final Key key) {
+        final String subdir = RevisionsIndex.getNextSubdir(base, key);
+        return String.join("", base, "/", subdir);
+    }
+
+    /**
      * Add new revision to the specified index file.
      * @param revision New revision number.
      * @param path Path to the revisions index file.
@@ -585,7 +636,7 @@ public final class RevisionsIndex {
     }
 
     /**
-     * Creates new revision object for json index file.
+     * Creates new revision object for json index file. Time is in ISO 8601 format.
      * @param revision New revision number.
      * @return JsonObject with revision info.
      */
