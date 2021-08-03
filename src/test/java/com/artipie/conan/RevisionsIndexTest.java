@@ -75,9 +75,8 @@ class RevisionsIndexTest {
             "Got correct pkg hash",
             Objects.equals(pkgs.get(0), RevisionsIndexTest.ZLIB_BIN_PKG)
         );
-        final List<Integer> binrevs = this.index.getBinaryRevisions(
-            revs.get(0).toString(), pkgs.get(0)
-        ).toCompletableFuture().join();
+        final List<Integer> binrevs = this.index.getBinaryRevisions(revs.get(0), pkgs.get(0))
+            .toCompletableFuture().join();
         MatcherAssert.assertThat("Expect 1 bin. rev.", binrevs.size() == 1);
         MatcherAssert.assertThat("binrev[0] == 0", binrevs.get(0) == 0);
         MatcherAssert.assertThat(
@@ -87,10 +86,57 @@ class RevisionsIndexTest {
         MatcherAssert.assertThat(
             "Last (max) bin. rev == 0",
             this.index.getLastBinaryRevision(
-                "0", RevisionsIndexTest.ZLIB_BIN_PKG
+                0, RevisionsIndexTest.ZLIB_BIN_PKG
             ).join() == 0
         );
     }
+
+    @Test
+    void updateRecipeIndexTest() {
+        this.storage.delete(new Key.From("zlib/1.2.11/_/_/revisions.txt")).join();
+        final List<Integer> result = this.index.updateRecipeIndex().toCompletableFuture().join();
+        final List<Integer> revs = this.index.getRecipeRevisions().toCompletableFuture().join();
+        MatcherAssert.assertThat("Expect 1 recipe rev.", result.size() == 1);
+        MatcherAssert.assertThat("rev[0] == 0", result.get(0) == 0);
+        MatcherAssert.assertThat("Expect 1 recipe rev.", revs.size() == 1);
+        MatcherAssert.assertThat("rev[0] == 0", revs.get(0) == 0);
+    }
+
+    @Test
+    void updateBinaryIndexTest() {
+        this.storage.delete((new Key.From(
+            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/revisions.txt"
+        ))).join();
+        final List<Integer> result = this.index.updateBinaryIndex(
+            0, RevisionsIndexTest.ZLIB_BIN_PKG
+            ).toCompletableFuture().join();
+        final List<Integer> binrevs = this.index.getBinaryRevisions(
+            0, RevisionsIndexTest.ZLIB_BIN_PKG
+        ).toCompletableFuture().join();
+        MatcherAssert.assertThat("Expect 1 bin. rev.", binrevs.size() == 1);
+        MatcherAssert.assertThat("binrev[0] == 0", binrevs.get(0) == 0);
+        MatcherAssert.assertThat("Expect 1 bins rev.", result.size() == 1);
+        MatcherAssert.assertThat("rev[0] == 0", result.get(0) == 0);
+    }
+
+    @Test
+    void fullIndexUpdateTest() {
+        this.storage.delete(new Key.From("zlib/1.2.11/_/_/revisions.txt")).join();
+        this.storage.delete((new Key.From(
+            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/revisions.txt"
+        ))).join();
+        this.index.fullIndexUpdate().toCompletableFuture().join();
+        final List<Integer> revs = this.index.getRecipeRevisions().toCompletableFuture().join();
+        final List<Integer> binrevs = this.index.getBinaryRevisions(
+            0, RevisionsIndexTest.ZLIB_BIN_PKG
+        ).toCompletableFuture().join();
+        MatcherAssert.assertThat("Expect 1 recipe rev.", revs.size() == 1);
+        MatcherAssert.assertThat("rev[0] == 0", revs.get(0) == 0);
+        MatcherAssert.assertThat("Expect 1 bin. rev.", binrevs.size() == 1);
+        MatcherAssert.assertThat("binrev[0] == 0", binrevs.get(0) == 0);
+    }
+
+    //TODO: 1st finish with reindex above, put others APIs tests in 2nd stage!?
 
     @Test
     void recipeRevisionUpdateTest() {
@@ -107,58 +153,13 @@ class RevisionsIndexTest {
 
     @Test
     void binaryRevisionUpdateTest() {
-        this.index.addBinaryRevision("0", RevisionsIndexTest.ZLIB_BIN_PKG, 1)
+        this.index.addBinaryRevision(0, RevisionsIndexTest.ZLIB_BIN_PKG, 1)
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Last bin. rev == 1",
             this.index.getLastBinaryRevision(
-                "0", RevisionsIndexTest.ZLIB_BIN_PKG
+                0, RevisionsIndexTest.ZLIB_BIN_PKG
             ).join() == 1
         );
-    }
-
-    @Test
-    void updateRecipeIndexTest() {
-        this.storage.delete(new Key.From("zlib/1.2.11/_/_/revisions.txt")).join();
-        final List<String> result = this.index.updateRecipeIndex().toCompletableFuture().join();
-        final List<Integer> revs = this.index.getRecipeRevisions().toCompletableFuture().join();
-        MatcherAssert.assertThat("Expect 1 recipe rev.", result.size() == 1);
-        MatcherAssert.assertThat("rev[0] == 0", result.get(0).equals("0"));
-        MatcherAssert.assertThat("Expect 1 recipe rev.", revs.size() == 1);
-        MatcherAssert.assertThat("rev[0] == 0", revs.get(0) == 0);
-    }
-
-    @Test
-    void updateBinaryIndexTest() {  //TODO: list of string vs int ...
-        this.storage.delete((new Key.From(
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/revisions.txt"
-        ))).join();
-        final List<String> result = this.index.updateBinaryIndex(
-            "0", RevisionsIndexTest.ZLIB_BIN_PKG
-            ).toCompletableFuture().join();
-        final List<Integer> binrevs = this.index.getBinaryRevisions(
-            "0", RevisionsIndexTest.ZLIB_BIN_PKG  //TODO: why "0" not 0 ??
-        ).toCompletableFuture().join();
-        MatcherAssert.assertThat("Expect 1 bin. rev.", binrevs.size() == 1);
-        MatcherAssert.assertThat("binrev[0] == 0", binrevs.get(0) == 0);
-        MatcherAssert.assertThat("Expect 1 bins rev.", result.size() == 1);
-        MatcherAssert.assertThat("rev[0] == 0", result.get(0).equals("0"));
-    }
-
-    @Test
-    void fullIndexUpdateTest() {
-        this.storage.delete(new Key.From("zlib/1.2.11/_/_/revisions.txt")).join();
-        this.storage.delete((new Key.From(
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/revisions.txt"
-        ))).join();
-        this.index.fullIndexUpdate().toCompletableFuture().join();
-        final List<Integer> revs = this.index.getRecipeRevisions().toCompletableFuture().join();
-        final List<Integer> binrevs = this.index.getBinaryRevisions(
-            "0", RevisionsIndexTest.ZLIB_BIN_PKG
-        ).toCompletableFuture().join();
-        MatcherAssert.assertThat("Expect 1 recipe rev.", revs.size() == 1);
-        MatcherAssert.assertThat("rev[0] == 0", revs.get(0) == 0);
-        MatcherAssert.assertThat("Expect 1 bin. rev.", binrevs.size() == 1);
-        MatcherAssert.assertThat("binrev[0] == 0", binrevs.get(0) == 0);
     }
 }
