@@ -76,22 +76,6 @@ abstract class BaseConanSlice implements Slice {
         this.pathwrap = pathwrap;
     }
 
-    /**
-     * Returns current Artipie storage instance.
-     * @return Storage object instance.
-     */
-    public Storage getStorage() {
-        return this.storage;
-    }
-
-    /**
-     * Returns current path wrapper for this Slice.
-     * @return Path wrapper object instance.
-     */
-    public PathWrap getPathWrap() {
-        return this.pathwrap;
-    }
-
     @Override
     public Response response(
         final String line,
@@ -108,7 +92,7 @@ abstract class BaseConanSlice implements Slice {
             content = CompletableFuture.completedFuture(new RequestResult());
         }
         return new AsyncResponse(
-            content.thenCompose(
+            content.thenApply(
                 data -> {
                     final Response result;
                     if (data.isEmpty()) {
@@ -125,10 +109,18 @@ abstract class BaseConanSlice implements Slice {
                             BaseConanSlice.CONTENT_TYPE, data.getType()
                         );
                     }
-                    return CompletableFuture.completedFuture(result);
+                    return result;
                 }
             )
         );
+    }
+
+    /**
+     * Returns current Artipie storage instance.
+     * @return Storage object instance.
+     */
+    protected Storage getStorage() {
+        return this.storage;
     }
 
     /**
@@ -204,7 +196,7 @@ abstract class BaseConanSlice implements Slice {
          * @return True, if data is empty.
          */
         public boolean isEmpty() {
-            return this.data == null || this.data.length == 0;
+            return this.data.length == 0;
         }
     }
 }

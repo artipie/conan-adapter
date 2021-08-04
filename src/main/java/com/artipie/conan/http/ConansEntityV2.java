@@ -150,7 +150,7 @@ public final class ConansEntityV2 {
                 final CompletableFuture<BaseConanSlice.RequestResult> result;
                 if (exist) {
                     result = storage.value(key).thenCompose(
-                        content -> new PublisherAs(content).asciiString().thenCompose(
+                        content -> new PublisherAs(content).asciiString().thenApply(
                             string -> {
                                 final JsonParser parser = Json.createParser(
                                     new StringReader(string)
@@ -161,16 +161,12 @@ public final class ConansEntityV2 {
                                 final Optional<JsonValue> max = revisions.stream().max(
                                     (v1, v2) -> {
                                         final String revision = "revision";
-                                        final String revx = v1.asJsonObject()
-                                            .getString(revision);
-                                        final String revy = v2.asJsonObject()
-                                            .getString(revision);
+                                        final String revx = v1.asJsonObject().getString(revision);
+                                        final String revy = v2.asJsonObject().getString(revision);
                                         return Integer.parseInt(revx) - Integer.parseInt(revy);
                                     });
                                 final String maxrev = max.get().toString();
-                                return CompletableFuture.completedFuture(
-                                    new BaseConanSlice.RequestResult(maxrev)
-                                );
+                                return new BaseConanSlice.RequestResult(maxrev);
                             }
                         )
                     );
@@ -191,7 +187,7 @@ public final class ConansEntityV2 {
         final List<Tuple2<Key, CompletableFuture<Boolean>>> keychecks) {
         return CompletableFuture.allOf(
             keychecks.stream().map(Tuple2::_2).toArray(CompletableFuture[]::new)
-        ).thenCompose(
+        ).thenApply(
             unused -> {
                 final StringBuilder result = keychecks.stream().filter(
                     tuple -> tuple._2().join()
@@ -204,13 +200,11 @@ public final class ConansEntityV2 {
                 ).collect(
                     StringBuilder::new, StringBuilder::append, (ignored1, ignored2) -> {
                     });
-                return CompletableFuture.completedFuture(
-                    new BaseConanSlice.RequestResult(
-                        String.join(
-                            "", "{\"files\":{",
-                            result.substring(0, result.length() - 1),
-                            "}}"
-                        )
+                return new BaseConanSlice.RequestResult(
+                    String.join(
+                        "", "{\"files\":{",
+                        result.substring(0, result.length() - 1),
+                        "}}"
                     )
                 );
             }
@@ -301,11 +295,10 @@ public final class ConansEntityV2 {
                     final CompletableFuture<RequestResult> result;
                     if (exist) {
                         result = getStorage().value(key).thenCompose(
-                            content -> new PublisherAs(content).bytes().thenCompose(
-                                bytes -> CompletableFuture.completedFuture(
-                                    new RequestResult(
-                                        bytes, ConansEntityV2.getContentType(key.string())
-                                    ))
+                            content -> new PublisherAs(content).bytes().thenApply(
+                                bytes -> new RequestResult(
+                                    bytes, ConansEntityV2.getContentType(key.string())
+                                )
                             )
                         );
                     } else {
@@ -381,11 +374,9 @@ public final class ConansEntityV2 {
                     final CompletableFuture<RequestResult> result;
                     if (exist) {
                         result = getStorage().value(key).thenCompose(
-                            content -> new PublisherAs(content).bytes().thenCompose(
-                                bytes -> CompletableFuture.completedFuture(
-                                    new RequestResult(
-                                        bytes, ConansEntityV2.getContentType(key.string())
-                                    )
+                            content -> new PublisherAs(content).bytes().thenApply(
+                                bytes -> new RequestResult(
+                                    bytes, ConansEntityV2.getContentType(key.string())
                                 )
                             )
                         );
