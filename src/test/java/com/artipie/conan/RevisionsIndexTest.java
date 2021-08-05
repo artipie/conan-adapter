@@ -29,8 +29,6 @@ import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,12 +37,24 @@ import org.junit.jupiter.api.Test;
  * Tests for RevisionsIndex class.
  * @since 0.1
  */
+@SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class RevisionsIndexTest {
 
     /**
      * ZLIB binary package dir. name (hash).
      */
     static final String ZLIB_BIN_PKG = "6af9cc7cb931c5ad942174fd7838eb655717c709";
+
+    /**
+     * Path to zlib package binary index file.
+     */
+    static final String ZLIB_BIN_INDEX =
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/revisions.txt";
+
+    /**
+     * Path to zlib package recipe index file.
+     */
+    static final String ZLIB_SRC_INDEX = "zlib/1.2.11/_/_/revisions.txt";
 
     /**
      * Test storage.
@@ -93,7 +103,7 @@ class RevisionsIndexTest {
 
     @Test
     void updateRecipeIndexTest() {
-        this.storage.delete(new Key.From("zlib/1.2.11/_/_/revisions.txt")).join();
+        this.storage.delete(new Key.From(RevisionsIndexTest.ZLIB_SRC_INDEX)).join();
         final List<Integer> result = this.index.updateRecipeIndex().toCompletableFuture().join();
         final List<Integer> revs = this.index.getRecipeRevisions().toCompletableFuture().join();
         MatcherAssert.assertThat("Expect 1 recipe rev.", result.size() == 1);
@@ -104,9 +114,7 @@ class RevisionsIndexTest {
 
     @Test
     void updateBinaryIndexTest() {
-        this.storage.delete((new Key.From(
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/revisions.txt"
-        ))).join();
+        this.storage.delete(new Key.From(RevisionsIndexTest.ZLIB_BIN_INDEX)).join();
         final List<Integer> result = this.index.updateBinaryIndex(
             0, RevisionsIndexTest.ZLIB_BIN_PKG
             ).toCompletableFuture().join();
@@ -121,10 +129,8 @@ class RevisionsIndexTest {
 
     @Test
     void fullIndexUpdateTest() {
-        this.storage.delete(new Key.From("zlib/1.2.11/_/_/revisions.txt")).join();
-        this.storage.delete((new Key.From(
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/revisions.txt"
-        ))).join();
+        this.storage.delete(new Key.From(RevisionsIndexTest.ZLIB_SRC_INDEX)).join();
+        this.storage.delete(new Key.From(RevisionsIndexTest.ZLIB_BIN_INDEX)).join();
         this.index.fullIndexUpdate().toCompletableFuture().join();
         final List<Integer> revs = this.index.getRecipeRevisions().toCompletableFuture().join();
         final List<Integer> binrevs = this.index.getBinaryRevisions(
@@ -136,12 +142,10 @@ class RevisionsIndexTest {
         MatcherAssert.assertThat("binrev[0] == 0", binrevs.get(0) == 0);
     }
 
-    //TODO: 1st finish with reindex above, put others APIs tests in 2nd stage!?
-
     @Test
-    void recipeRevisionUpdateTest() {
+    void recipeRevisionsUpdateTest() {
         MatcherAssert.assertThat(
-            "Last recipe rev == 0",
+            "Last recipe rev. == 0",
             this.index.getLastRecipeRevision().join() == 0
         );
         this.index.addRecipeRevision(1).toCompletableFuture().join();
@@ -149,10 +153,15 @@ class RevisionsIndexTest {
             "Last recipe rev == 1",
             this.index.getLastRecipeRevision().join() == 1
         );
+        this.index.removeRecipeRevision(1).toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Last recipe rev == 0",
+            this.index.getLastRecipeRevision().join() == 0
+        );
     }
 
     @Test
-    void binaryRevisionUpdateTest() {
+    void binaryRevisionsUpdateTest() {
         this.index.addBinaryRevision(0, RevisionsIndexTest.ZLIB_BIN_PKG, 1)
             .toCompletableFuture().join();
         MatcherAssert.assertThat(
@@ -160,6 +169,14 @@ class RevisionsIndexTest {
             this.index.getLastBinaryRevision(
                 0, RevisionsIndexTest.ZLIB_BIN_PKG
             ).join() == 1
+        );
+        this.index.removeBinaryRevision(0, RevisionsIndexTest.ZLIB_BIN_PKG, 1)
+            .toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Last bin. rev == 0",
+            this.index.getLastBinaryRevision(
+                0, RevisionsIndexTest.ZLIB_BIN_PKG
+            ).join() == 0
         );
     }
 }
