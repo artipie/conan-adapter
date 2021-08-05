@@ -30,12 +30,9 @@ import com.artipie.http.rq.RequestLineFrom;
 import io.vavr.Tuple2;
 import java.io.StringReader;
 import java.net.URLConnection;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
-import java.util.stream.Collectors;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonValue;
@@ -138,6 +135,19 @@ public final class ConansEntityV2 {
     }
 
     /**
+     * Wraps json string inside "files" object.
+     * @param str Json string.
+     * @return String with json object.
+     */
+    private static String asFilesJson(final String str) {
+        return String.join(
+            "", "{\"files\":{",
+            str,
+            "}}"
+        );
+    }
+
+    /**
      * Gets latest revision record from Conan revisions.txt json file.
      * @param key Artipie storage key for revisions.txt file.
      * @param storage Artipie storage instance.
@@ -179,39 +189,6 @@ public final class ConansEntityV2 {
     }
 
     /**
-     * Generates json for given storage keys and generated content.
-     * @param keychecks List of pairs (storage key; generated content).
-     * @return Json string in CompletableFuture.
-     */
-    private static CompletableFuture<BaseConanSlice.RequestResult> generateJson(
-        final List<Tuple2<Key, CompletableFuture<Boolean>>> keychecks) {
-        return CompletableFuture.allOf(
-            keychecks.stream().map(Tuple2::_2).toArray(CompletableFuture[]::new)
-        ).thenApply(
-            unused -> {
-                final StringBuilder result = keychecks.stream().filter(
-                    tuple -> tuple._2().join()
-                ).map(
-                    tuple -> new Tuple2<>(
-                        tuple._1().string(), tuple._1().string().split("/")
-                    )
-                ).map(
-                    t -> String.format("\"%1$s\":{},", t._2()[t._2().length - 1])
-                ).collect(
-                    StringBuilder::new, StringBuilder::append, (ignored1, ignored2) -> {
-                    });
-                return new BaseConanSlice.RequestResult(
-                    String.join(
-                        "", "{\"files\":{",
-                        result.substring(0, result.length() - 1),
-                        "}}"
-                    )
-                );
-            }
-        );
-    }
-
-    /**
      * Provides latest revision for package binary.
      * @since 0.1
      */
@@ -247,7 +224,6 @@ public final class ConansEntityV2 {
 
         /**
          * Ctor.
-         *
          * @param storage Current Artipie storage instance.
          */
         public PkgSrcLatest(final Storage storage) {
@@ -298,8 +274,7 @@ public final class ConansEntityV2 {
                             content -> new PublisherAs(content).bytes().thenApply(
                                 bytes -> new RequestResult(
                                     bytes, ConansEntityV2.getContentType(key.string())
-                                )
-                            )
+                                ))
                         );
                     } else {
                         result = CompletableFuture.completedFuture(new RequestResult());
@@ -328,21 +303,23 @@ public final class ConansEntityV2 {
         public CompletableFuture<RequestResult> getResult(
             final RequestLineFrom request, final String hostname, final Matcher matcher
         ) {
-            final List<Tuple2<Key, CompletableFuture<Boolean>>> keychecks =
-                Arrays.stream(ConansEntityV2.PKG_BIN_LIST).map(
-                    file -> {
-                        final Key key = new Key.From(
-                            String.format(
-                                ConansEntityV2.PKG_BIN_PATH,
-                                matcher.group(ConansEntityV2.PATH),
-                                matcher.group(ConansEntityV2.REV),
-                                matcher.group(ConansEntityV2.HASH),
-                                matcher.group(ConansEntityV2.REV_2), file
-                            ));
-                        return new Tuple2<>(key, getStorage().exists(key));
+            return BaseConanSlice.generateJson(
+                ConansEntityV2.PKG_BIN_LIST, file -> {
+                    final Key key = new Key.From(
+                        String.format(
+                            ConansEntityV2.PKG_BIN_PATH, matcher.group(ConansEntityV2.PATH),
+                            matcher.group(ConansEntityV2.REV), matcher.group(ConansEntityV2.HASH),
+                            matcher.group(ConansEntityV2.REV_2), file
+                        ));
+                    return new Tuple2<>(key, getStorage().exists(key));
+                }, tuple -> {
+                    Optional<String> result = Optional.empty();
+                    if (tuple._2()) {
+                        result = Optional.of("");
                     }
-                ).collect(Collectors.toList());
-            return ConansEntityV2.generateJson(keychecks);
+                    return result;
+                }, ConansEntityV2::asFilesJson
+            );
         }
     }
 
@@ -377,8 +354,7 @@ public final class ConansEntityV2 {
                             content -> new PublisherAs(content).bytes().thenApply(
                                 bytes -> new RequestResult(
                                     bytes, ConansEntityV2.getContentType(key.string())
-                                )
-                            )
+                                ))
                         );
                     } else {
                         result = CompletableFuture.completedFuture(new RequestResult());
@@ -407,18 +383,22 @@ public final class ConansEntityV2 {
         public CompletableFuture<RequestResult> getResult(
             final RequestLineFrom request, final String hostname, final Matcher matcher
         ) {
-            final List<Tuple2<Key, CompletableFuture<Boolean>>> keychecks =
-                Arrays.stream(ConansEntityV2.PKG_SRC_LIST).map(
-                    file -> {
-                        final Key key = new Key.From(
-                            String.format(
-                                ConansEntityV2.PKG_SRC_PATH, matcher.group(ConansEntityV2.PATH),
-                                matcher.group(ConansEntityV2.REV), file
-                            ));
-                        return new Tuple2<>(key, getStorage().exists(key));
+            return BaseConanSlice.generateJson(
+                ConansEntityV2.PKG_SRC_LIST, file -> {
+                    final Key key = new Key.From(
+                        String.format(
+                            ConansEntityV2.PKG_SRC_PATH, matcher.group(ConansEntityV2.PATH),
+                            matcher.group(ConansEntityV2.REV), file
+                        ));
+                    return new Tuple2<>(key, getStorage().exists(key));
+                }, tuple -> {
+                    Optional<String> result = Optional.empty();
+                    if (tuple._2()) {
+                        result = Optional.of("");
                     }
-                ).collect(Collectors.toList());
-            return ConansEntityV2.generateJson(keychecks);
+                    return result;
+                }, ConansEntityV2::asFilesJson
+            );
         }
     }
 }

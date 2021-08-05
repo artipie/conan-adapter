@@ -63,6 +63,7 @@ public final class ConanSlice extends Slice.Wrap {
      * @param storage Storage object.
      * @param perms Permissions.
      * @param auth Authentication parameters.
+     * @checkstyle MethodLengthCheck (200 lines)
      */
     @SuppressWarnings("PMD.ExcessiveMethodLength")
     public ConanSlice(
@@ -85,7 +86,7 @@ public final class ConanSlice extends Slice.Wrap {
                     )
                 ),
                 new RtRulePath(
-                    new RtRule.ByPath(ConansEntity.SEARCH_SRC_PKG_PATH.getPath()),
+                    new RtRule.ByPath(new PathWrap.SearchSrcPkg().getPath()),
                     new BasicAuthSlice(
                         new ConansEntity.GetSearchSrcPkg(storage),
                         auth,
@@ -94,18 +95,29 @@ public final class ConanSlice extends Slice.Wrap {
                 ),
                 new RtRulePath(
                     new RtRule.All(
-                        new RtRule.ByPath(ConansEntity.DLOAD_SRC_PATH.getPath()),
+                        new RtRule.ByPath(new PathWrap.DownloadBin().getPath()),
                         ByMethodsRule.Standard.GET
                     ),
                     new BasicAuthSlice(
-                        new ConansEntity.GetDownload(storage),
+                        new ConansEntity.DownloadBin(storage),
                         auth,
                         new Permission.ByName(perms, Action.Standard.READ)
                     )
                 ),
                 new RtRulePath(
                     new RtRule.All(
-                        new RtRule.ByPath(ConansEntity.SEARCH_BIN_PKG_PATH.getPath()),
+                        new RtRule.ByPath(new PathWrap.DownloadSrc().getPath()),
+                        ByMethodsRule.Standard.GET
+                    ),
+                    new BasicAuthSlice(
+                        new ConansEntity.DownloadSrc(storage),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.READ)
+                    )
+                ),
+                new RtRulePath(
+                    new RtRule.All(
+                        new RtRule.ByPath(new PathWrap.SearchBinPkg().getPath()),
                         ByMethodsRule.Standard.GET
                     ),
                     new BasicAuthSlice(
@@ -116,7 +128,7 @@ public final class ConanSlice extends Slice.Wrap {
                 ),
                 new RtRulePath(
                     new RtRule.All(
-                        new RtRule.ByPath(ConansEntity.PKG_BIN_INFO_PATH.getPath()),
+                        new RtRule.ByPath(new PathWrap.PkgBinInfo().getPath()),
                         ByMethodsRule.Standard.GET
                     ),
                     new BasicAuthSlice(

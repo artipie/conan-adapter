@@ -23,6 +23,7 @@
  */
 package com.artipie.conan.http;
 
+import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.http.Response;
 import com.artipie.http.Slice;
@@ -32,12 +33,17 @@ import com.artipie.http.rq.RqHeaders;
 import com.artipie.http.rs.RsWithBody;
 import com.artipie.http.rs.RsWithHeaders;
 import com.artipie.http.rs.StandardRs;
+import io.vavr.Tuple2;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 import org.reactivestreams.Publisher;
 
 /**
@@ -133,6 +139,47 @@ abstract class BaseConanSlice implements Slice {
     protected abstract CompletableFuture<RequestResult> getResult(
         RequestLineFrom request, String hostname, Matcher matcher
     );
+
+    /**
+     * Generate RequestResult based on array of keys (files) and several handlers.
+     * CompletableFuture.join() won't block here, since it's used after CompletableFuture.allOf().
+     * @param keys Array of keys to process.
+     * @param mapper Mapper of key to the tuple with key & completable future.
+     * @param generator Filters and generates value for json.
+     * @param ctor Constructs resulting json string.
+     * @param <T> Generators result type.
+     * @return Json RequestResult in CompletableFuture.
+     * @checkstyle ParameterNumberCheck (40 lines)
+     */
+    protected static <T> CompletableFuture<RequestResult> generateJson(
+        final String[] keys,
+        final Function<String, Tuple2<Key, CompletableFuture<T>>> mapper,
+        final Function<Tuple2<String, T>, Optional<String>> generator,
+        final Function<String, String> ctor
+    ) {
+        final List<Tuple2<Key, CompletableFuture<T>>> keychecks = Arrays.stream(keys).map(mapper)
+            .collect(Collectors.toList());
+        return CompletableFuture.allOf(
+            keychecks.stream().map(Tuple2::_2).toArray(CompletableFuture[]::new)
+        ).thenApply(
+            unused -> {
+                final StringBuilder builder = new StringBuilder();
+                for (final Tuple2<Key, CompletableFuture<T>> tuple : keychecks) {
+                    final Optional<String> result = generator.apply(
+                        new Tuple2<>(tuple._1().string(), tuple._2().join())
+                    );
+                    if (result.isPresent()) {
+                        final String[] parts = tuple._1().string().split("/");
+                        builder.append(
+                            String.format(
+                                "\"%1$s\":\"%2$s\",", parts[parts.length - 1], result.get()
+                            ));
+                    }
+                }
+                return builder.substring(0, builder.length() - 1);
+            }
+        ).thenApply(ctor).thenApply(RequestResult::new);
+    }
 
     /**
      * HTTP Request result bytes + Content-type string.
