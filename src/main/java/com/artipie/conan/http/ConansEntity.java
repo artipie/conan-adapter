@@ -242,7 +242,7 @@ public final class ConansEntity {
             final String pkghash
         ) throws IOException {
             final CompletableFuture<String> result = new PublisherAs(content)
-                .string(StandardCharsets.UTF_8).thenCompose(
+                .string(StandardCharsets.UTF_8).thenApply(
                     data -> {
                         final Wini conaninfo;
                         try {
@@ -267,8 +267,7 @@ public final class ConansEntity {
                             .iterator().next();
                         pkgbuilder.add(hashfield, hashvalue);
                         jsonbuilder.add(pkghash, pkgbuilder);
-                        final String res = jsonbuilder.build().toString();
-                        return CompletableFuture.completedFuture(res);
+                        return jsonbuilder.build().toString();
                     }).toCompletableFuture();
             return result;
         }
@@ -367,7 +366,7 @@ public final class ConansEntity {
                     final CompletableFuture<String> result;
                     if (exist) {
                         result = this.getStorage().value(key).thenCompose(
-                            content -> new PublisherAs(content).bytes().thenCompose(
+                            content -> new PublisherAs(content).bytes().thenApply(
                                 data -> {
                                     String hashstr;
                                     try {
@@ -378,7 +377,7 @@ public final class ConansEntity {
                                     } catch (final NoSuchAlgorithmException exception) {
                                         hashstr = "";
                                     }
-                                    return CompletableFuture.completedFuture(hashstr);
+                                    return hashstr;
                                 })
                         );
                     } else {
