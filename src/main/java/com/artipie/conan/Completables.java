@@ -26,6 +26,7 @@ package com.artipie.conan;
 import io.vavr.Tuple2;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -36,43 +37,97 @@ import java.util.stream.Collectors;
 public final class Completables {
 
     /**
-     * Private ctor. Static methods only.
+     * Coverts List of CompletableFutures to CompletableFuture providing list or array with results.
+     * @param <T> Type of the results.
+     * @since 0.1
      */
-    private Completables() {
+    public static final class ForList<T> {
+
+        /**
+         * CompletableFuture to wait for all items.
+         */
+        private final CompletableFuture<Void>  alls;
+
+        /**
+         * List of CompletableFutures to process.
+         */
+        private final List<CompletableFuture<T>> futures;
+
+        /**
+         * Initializes instance with the List of CompletableFutures.
+         * @param futures List of CompletableFutures to process.
+         */
+        @SuppressWarnings("PMD.ConstructorOnlyInitializesOrCallOtherConstructors")
+        public ForList(final List<CompletableFuture<T>> futures) {
+            @SuppressWarnings("rawtypes") final CompletableFuture[] arr = futures
+                .toArray(new CompletableFuture[0]);
+            this.alls = CompletableFuture.allOf(arr);
+            this.futures = futures;
+        }
+
+        /**
+         * Converts to the List of results inside CompletableFuture.
+         * @return List of results inside CompletableFuture.
+         */
+        public CompletableFuture<List<T>> toList() {
+            return this.alls.thenApply(
+                nothing -> this.futures.stream().map(CompletableFuture::join)
+                    .collect(Collectors.toList())
+            );
+        }
+
+        /**
+         * Converts to the array of results inside CompletableFuture.
+         * @param generator Array instance generator.
+         * @return Array of results inside CompletableFuture.
+         */
+        public CompletableFuture<T[]> toArray(final IntFunction<T[]> generator) {
+            return this.alls.thenApply(
+                nothing -> this.futures.stream().map(CompletableFuture::join).toArray(generator)
+            );
+        }
     }
 
     /**
-     * Returns CompletableFuture with extracted results from all CompletableFutures in the List.
-     * @param futures List of CompletableFuture objects to wait & collect result.
-     * @param <T> Type of the data for CompletableFuture.
-     * @return CompletableFuture with the List of results.
+     * Coverts List of CompletableFutures to CompletableFuture providing list of Tuples.
+     * @param <K> Key type for the CompletableFuture result value.
+     * @param <V> Type of the result value.
+     * @since 0.1
      */
-    public static <T> CompletableFuture<List<T>> forItems(
-        final List<CompletableFuture<T>> futures
-    ) {
-        @SuppressWarnings("rawtypes") final CompletableFuture[] arr = futures
-            .toArray(new CompletableFuture[0]);
-        return CompletableFuture.allOf(arr).thenApply(
-            nothing -> futures.stream().map(CompletableFuture::join).collect(Collectors.toList())
-        );
-    }
+    public static final class ForTuples<K, V> {
 
-    /**
-     * Returns CompletableFuture with extracted results from all CompletableFutures in the tuples.
-     * @param futures List of Tuples of Key + its CompletableFuture.
-     * @param <K> Type of the key.
-     * @param <V> Type of the value, CompletableFuture result.
-     * @return CompletableFuture with the List of Tuples with K & V directly.
-     */
-    public static <K, V> CompletableFuture<List<Tuple2<K, V>>> forTuples(
-        final List<Tuple2<K, CompletableFuture<V>>> futures
-    ) {
-        @SuppressWarnings("rawtypes") final CompletableFuture[] arr = futures
-            .stream().map(Tuple2::_2).toArray(CompletableFuture[]::new);
-        return CompletableFuture.allOf(arr).thenApply(
-            nothing -> futures.stream().map(
-                tuple -> new Tuple2<>(tuple._1(), tuple._2().join())
-            ).collect(Collectors.toList())
-        );
+        /**
+         * CompletableFuture to wait for all items.
+         */
+        private final CompletableFuture<Void>  alls;
+
+        /**
+         * List of Tuples with CompletableFuture.
+         */
+        private final List<Tuple2<K, CompletableFuture<V>>> futures;
+
+        /**
+         * Initializes instance with the List of Tuples with CompletableFuture.
+         * @param futures List of Tuples with CompletableFuture.
+         */
+        @SuppressWarnings("PMD.ConstructorOnlyInitializesOrCallOtherConstructors")
+        public ForTuples(final List<Tuple2<K, CompletableFuture<V>>> futures) {
+            @SuppressWarnings("rawtypes") final CompletableFuture[] arr = futures
+                .stream().map(Tuple2::_2).toArray(CompletableFuture[]::new);
+            this.alls = CompletableFuture.allOf(arr);
+            this.futures = futures;
+        }
+
+        /**
+         * Converts to the List of Tuples results inside CompletableFuture.
+         * @return List of Tuples inside CompletableFuture.
+         */
+        public CompletableFuture<List<Tuple2<K, V>>> toTuples() {
+            return this.alls.thenApply(
+                nothing -> this.futures.stream().map(
+                    tuple -> new Tuple2<>(tuple._1(), tuple._2().join())
+                ).collect(Collectors.toList())
+            );
+        }
     }
 }
