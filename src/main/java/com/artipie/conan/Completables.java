@@ -57,11 +57,11 @@ public final class Completables {
          * Initializes instance with the List of CompletableFutures.
          * @param futures List of CompletableFutures to process.
          */
-        @SuppressWarnings("PMD.ConstructorOnlyInitializesOrCallOtherConstructors")
+        @SuppressWarnings("rawtypes")
         public ForList(final List<CompletableFuture<T>> futures) {
-            @SuppressWarnings("rawtypes") final CompletableFuture[] arr = futures
-                .toArray(new CompletableFuture[0]);
-            this.alls = CompletableFuture.allOf(arr);
+            this.alls = CompletableFuture.allOf(
+                futures.toArray(new CompletableFuture[0])
+            );
             this.futures = futures;
         }
 
@@ -110,11 +110,10 @@ public final class Completables {
          * Initializes instance with the List of Tuples with CompletableFuture.
          * @param futures List of Tuples with CompletableFuture.
          */
-        @SuppressWarnings("PMD.ConstructorOnlyInitializesOrCallOtherConstructors")
         public ForTuples(final List<Tuple2<K, CompletableFuture<V>>> futures) {
-            @SuppressWarnings("rawtypes") final CompletableFuture[] arr = futures
-                .stream().map(Tuple2::_2).toArray(CompletableFuture[]::new);
-            this.alls = CompletableFuture.allOf(arr);
+            this.alls = CompletableFuture.allOf(
+                futures.stream().map(Tuple2::_2).toArray(CompletableFuture[]::new)
+            );
             this.futures = futures;
         }
 
