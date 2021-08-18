@@ -46,7 +46,7 @@ public final class Completables {
         /**
          * CompletableFuture to wait for all items.
          */
-        private final CompletableFuture<Void>  alls;
+        private final CompletableFuture<Void> alls;
 
         /**
          * List of CompletableFutures to process.
@@ -99,7 +99,7 @@ public final class Completables {
         /**
          * CompletableFuture to wait for all items.
          */
-        private final CompletableFuture<Void>  alls;
+        private final CompletableFuture<Void> alls;
 
         /**
          * List of Tuples with CompletableFuture.
