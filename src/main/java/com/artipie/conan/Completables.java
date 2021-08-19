@@ -41,7 +41,7 @@ public final class Completables {
      * @param <T> Type of the results.
      * @since 0.1
      */
-    public static final class ForList<T> {
+    public static final class JoinList<T> {
 
         /**
          * CompletableFuture to wait for all items.
@@ -58,7 +58,7 @@ public final class Completables {
          * @param futures List of CompletableFutures to process.
          */
         @SuppressWarnings("rawtypes")
-        public ForList(final List<CompletableFuture<T>> futures) {
+        public JoinList(final List<CompletableFuture<T>> futures) {
             this.alls = CompletableFuture.allOf(
                 futures.toArray(new CompletableFuture[0])
             );
@@ -94,7 +94,7 @@ public final class Completables {
      * @param <V> Type of the result value.
      * @since 0.1
      */
-    public static final class ForTuples<K, V> {
+    public static final class JoinTuples<K, V> {
 
         /**
          * CompletableFuture to wait for all items.
@@ -110,7 +110,7 @@ public final class Completables {
          * Initializes instance with the List of Tuples with CompletableFuture.
          * @param futures List of Tuples with CompletableFuture.
          */
-        public ForTuples(final List<Tuple2<K, CompletableFuture<V>>> futures) {
+        public JoinTuples(final List<Tuple2<K, CompletableFuture<V>>> futures) {
             this.alls = CompletableFuture.allOf(
                 futures.stream().map(Tuple2::_2).toArray(CompletableFuture[]::new)
             );
