@@ -89,7 +89,7 @@ public final class Completables {
     }
 
     /**
-     * Coverts List of CompletableFutures to CompletableFuture providing list of Tuples.
+     * Coverts List of Tuples with CompletableFutures to CompletableFuture providing list of Tuples.
      * @param <K> Key type for the CompletableFuture result value.
      * @param <V> Type of the result value.
      * @since 0.1
