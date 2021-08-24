@@ -28,6 +28,7 @@ import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.ext.PublisherAs;
 import com.artipie.http.rq.RequestLineFrom;
+import com.artipie.http.rq.RqParams;
 import io.vavr.Tuple2;
 import java.io.IOException;
 import java.io.StringReader;
@@ -42,7 +43,9 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import javax.json.Json;
+import javax.json.JsonArrayBuilder;
 import javax.json.JsonObjectBuilder;
+import org.apache.http.client.utils.URIBuilder;
 import org.ini4j.Wini;
 
 /**
@@ -58,7 +61,7 @@ public final class ConansEntity {
     /**
      * Protocol type for download URIs.
      */
-    private static final String PROTOCOL = "http://";
+    private static final String PROTOCOL = "http";
 
     /**
      * Subdir for package recipe (sources).
@@ -84,11 +87,6 @@ public final class ConansEntity {
      * Hash (of the package binary) part of the request URI.
      */
     private static final String URI_HASH = "hash";
-
-    /**
-     * URL formatting string.
-     */
-    private static final String URL_FMT = "%1$s%2$s/%3$s";
 
     /**
      * File with binary package information on corresponding build configuration.
@@ -152,14 +150,14 @@ public final class ConansEntity {
                 }, tuple -> {
                     Optional<String> result = Optional.empty();
                     if (tuple._2()) {
-                        result = Optional.of(
-                            String.format(
-                                ConansEntity.URL_FMT, ConansEntity.PROTOCOL, hostname, tuple._1()
-                            )
-                        );
+                        final URIBuilder builder = new URIBuilder();
+                        builder.setScheme(ConansEntity.PROTOCOL);
+                        builder.setHost(hostname);
+                        builder.setPath(tuple._1());
+                        result = Optional.of(builder.toString());
                     }
                     return result;
-                }, str -> String.join("", "{", str, "}")
+                }, builder -> builder.build().toString()
             );
         }
     }
@@ -192,13 +190,14 @@ public final class ConansEntity {
                 }, tuple -> {
                     Optional<String> result = Optional.empty();
                     if (tuple._2()) {
-                        result = Optional.of(
-                            String.format(
-                                ConansEntity.URL_FMT, ConansEntity.PROTOCOL, hostname, tuple._1()
-                            ));
+                        final URIBuilder builder = new URIBuilder();
+                        builder.setScheme(ConansEntity.PROTOCOL);
+                        builder.setHost(hostname);
+                        builder.setPath(tuple._1());
+                        result = Optional.of(builder.toString());
                     }
                     return result;
-                }, str -> String.join("", "{", str, "}")
+                }, builder -> builder.build().toString()
             );
         }
     }
@@ -351,7 +350,7 @@ public final class ConansEntity {
                         result = Optional.of(tuple._2());
                     }
                     return result;
-                }, str -> String.join("", "{", str, "}")
+                }, builder -> builder.build().toString()
             );
         }
 
@@ -406,7 +405,7 @@ public final class ConansEntity {
         @Override
         public CompletableFuture<RequestResult> getResult(final RequestLineFrom request,
             final String hostname, final Matcher matcher) {
-            final String question = getQuestion(request);
+            final String question = new RqParams(request.uri()).value("q").orElse("");
             return this.getStorage().list(Key.ROOT).thenApply(
                 keys -> {
                     final Set<String> recipes = new HashSet<>();
@@ -424,30 +423,14 @@ public final class ConansEntity {
                             }
                         }
                     }
-                    final StringBuilder builder = new StringBuilder();
+                    final JsonArrayBuilder builder = Json.createArrayBuilder();
                     for (final String str : recipes) {
-                        builder.append(String.format("\"%1$s\",", str));
+                        builder.add(str);
                     }
                     return new RequestResult(
-                        String.format(
-                            "{ results: [%1$s] }",
-                            builder.substring(0, builder.length() - 1)
-                        ));
+                        Json.createObjectBuilder().add("results", builder).build().toString()
+                    );
                 });
-        }
-
-        /**
-         * Extracts question parameter from the query string.
-         * @param request Request line object with query string.
-         * @return Question ("q") parameter's value, as String.
-         */
-        private static String getQuestion(final RequestLineFrom request) {
-            String result = "";
-            final String[] query = request.uri().getQuery().split("=");
-            if (query.length == 2 && query[0].equals("q")) {
-                result = query[1];
-            }
-            return result;
         }
     }
 }

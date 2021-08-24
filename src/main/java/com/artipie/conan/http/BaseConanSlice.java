@@ -25,6 +25,7 @@ package com.artipie.conan.http;
 
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
+import com.artipie.conan.Completables;
 import com.artipie.http.Response;
 import com.artipie.http.Slice;
 import com.artipie.http.async.AsyncResponse;
@@ -44,11 +45,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
+import javax.json.Json;
+import javax.json.JsonObjectBuilder;
 import org.reactivestreams.Publisher;
 
 /**
  * Base slice class for Conan REST APIs.
  * @since 0.1
+ * @checkstyle ClassDataAbstractionCouplingCheck (500 lines)
  */
 abstract class BaseConanSlice implements Slice {
 
@@ -142,7 +146,6 @@ abstract class BaseConanSlice implements Slice {
 
     /**
      * Generate RequestResult based on array of keys (files) and several handlers.
-     * CompletableFuture.join() won't block here, since it's used after CompletableFuture.allOf().
      * @param keys Array of keys to process.
      * @param mapper Mapper of key to the tuple with key & completable future.
      * @param generator Filters and generates value for json.
@@ -155,30 +158,24 @@ abstract class BaseConanSlice implements Slice {
         final String[] keys,
         final Function<String, Tuple2<Key, CompletableFuture<T>>> mapper,
         final Function<Tuple2<String, T>, Optional<String>> generator,
-        final Function<String, String> ctor
+        final Function<JsonObjectBuilder, String> ctor
     ) {
         final List<Tuple2<Key, CompletableFuture<T>>> keychecks = Arrays.stream(keys).map(mapper)
             .collect(Collectors.toList());
-        return CompletableFuture.allOf(
-            keychecks.stream().map(Tuple2::_2).toArray(CompletableFuture[]::new)
-        ).thenApply(
-            unused -> {
-                final StringBuilder builder = new StringBuilder();
-                for (final Tuple2<Key, CompletableFuture<T>> tuple : keychecks) {
+        return new Completables.JoinTuples<>(keychecks).toTuples().thenApply(
+            tuples -> {
+                final JsonObjectBuilder builder = Json.createObjectBuilder();
+                for (final Tuple2<Key, T> tuple : tuples) {
                     final Optional<String> result = generator.apply(
-                        new Tuple2<>(tuple._1().string(), tuple._2().join())
+                        new Tuple2<>(tuple._1().string(), tuple._2())
                     );
                     if (result.isPresent()) {
                         final String[] parts = tuple._1().string().split("/");
-                        builder.append(
-                            String.format(
-                                "\"%1$s\":\"%2$s\",", parts[parts.length - 1], result.get()
-                            ));
+                        builder.add(parts[parts.length - 1], result.get());
                     }
                 }
-                return builder.substring(0, builder.length() - 1);
-            }
-        ).thenApply(ctor).thenApply(RequestResult::new);
+                return builder;
+            }).thenApply(ctor).thenApply(RequestResult::new);
     }
 
     /**

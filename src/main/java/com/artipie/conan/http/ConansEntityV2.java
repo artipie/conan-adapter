@@ -35,6 +35,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import javax.json.Json;
 import javax.json.JsonArray;
+import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 import javax.json.stream.JsonParser;
 
@@ -136,15 +137,11 @@ public final class ConansEntityV2 {
 
     /**
      * Wraps json string inside "files" object.
-     * @param str Json string.
+     * @param builder Json object builder filled with values.
      * @return String with json object.
      */
-    private static String asFilesJson(final String str) {
-        return String.join(
-            "", "{\"files\":{",
-            str,
-            "}}"
-        );
+    private static String asFilesJson(final JsonObjectBuilder builder) {
+        return Json.createObjectBuilder().add("files", builder).build().toString();
     }
 
     /**
