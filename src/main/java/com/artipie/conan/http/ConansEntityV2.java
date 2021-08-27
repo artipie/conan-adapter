@@ -210,7 +210,6 @@ public final class ConansEntityV2 {
                 ));
             return ConansEntityV2.getLatestRevisionJson(key, getStorage());
         }
-
     }
 
     /**
