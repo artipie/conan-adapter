@@ -309,13 +309,7 @@ public final class ConansEntityV2 {
                             matcher.group(ConansEntityV2.REV_2), file
                         ));
                     return new Tuple2<>(key, getStorage().exists(key));
-                }, tuple -> {
-                    Optional<String> result = Optional.empty();
-                    if (tuple._2()) {
-                        result = Optional.of("");
-                    }
-                    return result;
-                }, ConansEntityV2::asFilesJson
+                }, tuple -> Optional.of("").filter(t -> tuple._2()), ConansEntityV2::asFilesJson
             );
         }
     }
@@ -388,13 +382,7 @@ public final class ConansEntityV2 {
                             matcher.group(ConansEntityV2.REV), file
                         ));
                     return new Tuple2<>(key, getStorage().exists(key));
-                }, tuple -> {
-                    Optional<String> result = Optional.empty();
-                    if (tuple._2()) {
-                        result = Optional.of("");
-                    }
-                    return result;
-                }, ConansEntityV2::asFilesJson
+                }, tuple -> Optional.of("").filter(t -> tuple._2()), ConansEntityV2::asFilesJson
             );
         }
     }

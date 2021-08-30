@@ -45,6 +45,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.json.Json;
 import javax.json.JsonObjectBuilder;
 import org.reactivestreams.Publisher;
@@ -160,7 +161,7 @@ abstract class BaseConanSlice implements Slice {
         final Function<Tuple2<String, T>, Optional<String>> generator,
         final Function<JsonObjectBuilder, String> ctor
     ) {
-        final List<Tuple2<Key, CompletableFuture<T>>> keychecks = Arrays.stream(keys).map(mapper)
+        final List<Tuple2<Key, CompletableFuture<T>>> keychecks = Stream.of(keys).map(mapper)
             .collect(Collectors.toList());
         return new Completables.JoinTuples<>(keychecks).toTuples().thenApply(
             tuples -> {

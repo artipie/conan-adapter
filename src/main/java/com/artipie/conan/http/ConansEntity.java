@@ -344,13 +344,8 @@ public final class ConansEntity {
                             ConansEntity.PKG_REV_DIR, name
                         ));
                     return new Tuple2<>(key, this.generateMDhash(key));
-                }, tuple -> {
-                    Optional<String> result = Optional.empty();
-                    if (tuple._2().length() > 0) {
-                        result = Optional.of(tuple._2());
-                    }
-                    return result;
-                }, builder -> builder.build().toString()
+                }, tuple -> Optional.of(tuple._2()).filter(t -> t.length() > 0),
+                builder -> builder.build().toString()
             );
         }
 
