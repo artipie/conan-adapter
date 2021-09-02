@@ -31,19 +31,22 @@ import com.artipie.asto.test.TestResource;
 import java.io.StringReader;
 import java.time.Instant;
 import java.util.List;
+import java.util.stream.Stream;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonValue;
 import javax.json.stream.JsonParser;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Tests for RevisionsIndex class.
  * @since 0.1
  */
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.UseVarargs"})
 class RevisionsIndexTest {
 
     /**
@@ -63,6 +66,11 @@ class RevisionsIndexTest {
     static final String ZLIB_SRC_INDEX = "zlib/1.2.11/_/_/revisions.txt";
 
     /**
+     * Path prefix for conan repository test data.
+     */
+    static final String DIR_PREFIX = "conan-test/data/";
+
+    /**
      * Test storage.
      */
     private Storage storage;
@@ -75,13 +83,16 @@ class RevisionsIndexTest {
     @BeforeEach
     void setUp() {
         this.storage = new InMemoryStorage();
-        new TestResource("conan-test/data").addFilesTo(this.storage, Key.ROOT);
         this.index = new RevisionsIndex(this.storage, "zlib/1.2.11/_/_");
     }
 
-    @Test
-    void updateRecipeIndex() {
-        this.storage.delete(new Key.From(RevisionsIndexTest.ZLIB_SRC_INDEX)).join();
+    @ParameterizedTest
+    @MethodSource("indexingTestFilesList")
+    void updateRecipeIndex(final String[] files) {
+        for (final String file : files) {
+            new TestResource(RevisionsIndexTest.DIR_PREFIX + file)
+                .saveTo(this.storage, new Key.From(file));
+        }
         final List<Integer> result = this.index.updateRecipeIndex().toCompletableFuture().join();
         final JsonParser parser = this.storage.value(
             new Key.From(RevisionsIndexTest.ZLIB_SRC_INDEX)
@@ -93,24 +104,28 @@ class RevisionsIndexTest {
         final String time = RevisionsIndexTest.getJsonStr(revs.get(0), "time");
         final String revision = RevisionsIndexTest.getJsonStr(revs.get(0), "revision");
         MatcherAssert.assertThat(
-            "Checking revision object fields are correct",
+            "Checking that parsed revision object fields have correct format",
             time.length() > 0 && revision.length() > 0 && result.size() == revs.size()
         );
         MatcherAssert.assertThat(
-            "Checking revision object values are correct",
+            "Checking that revision object fields have correct values",
             result.get(0) == Integer.parseInt(revision)
                 && Instant.parse(time).getEpochSecond() > 0
         );
     }
 
-    @Test
-    void updateBinaryIndex() {
-        this.storage.delete(new Key.From(RevisionsIndexTest.ZLIB_BIN_INDEX)).join();
+    @ParameterizedTest
+    @MethodSource("indexingTestFilesList")
+    void updateBinaryIndex(final String[] files) {
+        for (final String file : files) {
+            new TestResource(RevisionsIndexTest.DIR_PREFIX + file)
+                .saveTo(this.storage, new Key.From(file));
+        }
         final List<Integer> result = this.index.updateBinaryIndex(
             0, RevisionsIndexTest.ZLIB_BIN_PKG
         ).toCompletableFuture().join();
         final JsonParser parser = this.storage.value(
-            new Key.From(RevisionsIndexTest.ZLIB_SRC_INDEX)
+            new Key.From(RevisionsIndexTest.ZLIB_BIN_INDEX)
         ).thenCompose(content -> new PublisherAs(content).asciiString()).thenApply(
             str -> Json.createParser(new StringReader(str))
         ).join();
@@ -119,11 +134,11 @@ class RevisionsIndexTest {
         final String time = RevisionsIndexTest.getJsonStr(revs.get(0), "time");
         final String revision = RevisionsIndexTest.getJsonStr(revs.get(0), "revision");
         MatcherAssert.assertThat(
-            "Checking revision object fields are correct",
+            "Checking that parsed revision object fields have correct format",
             time.length() > 0 && revision.length() > 0 && result.size() == revs.size()
         );
         MatcherAssert.assertThat(
-            "Checking revision object values are correct",
+            "Checking that revision object fields have correct values",
             result.get(0) == Integer.parseInt(revision)
                 && Instant.parse(time).getEpochSecond() > 0
         );
@@ -131,5 +146,24 @@ class RevisionsIndexTest {
 
     private static String getJsonStr(final JsonValue object, final String key) {
         return object.asJsonObject().get(key).toString().replaceAll("\"", "");
+    }
+
+    /**
+     * Returns test files list for indexing tests.
+     * @return List of files, as Stream of junit Arguments.
+     * @checkstyle LineLengthCheck (20 lines)
+     */
+    @SuppressWarnings({"PMD.UnusedPrivateMethod", "PMD.LineLengthCheck"})
+    private static Stream<Arguments> indexingTestFilesList() {
+        final String[] files = new String[]{
+            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conanmanifest.txt",
+            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conaninfo.txt",
+            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conan_package.tgz",
+            "zlib/1.2.11/_/_/0/export/conan_sources.tgz",
+            "zlib/1.2.11/_/_/0/export/conan_export.tgz",
+            "zlib/1.2.11/_/_/0/export/conanfile.py",
+            "zlib/1.2.11/_/_/0/export/conanmanifest.txt",
+        };
+        return Stream.of(Arguments.of((Object) files));
     }
 }

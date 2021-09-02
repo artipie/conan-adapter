@@ -234,9 +234,7 @@ public final class RevisionsIndex {
      * @return Next subdir name after base, or empty string if none.
      */
     private static String getNextSubdir(final String base, final Key key) {
-        final int next = key.string().indexOf(
-            '/', base.length() + 1
-        );
+        final int next = key.string().indexOf('/', base.length() + 1);
         final String result;
         if (next < 0) {
             result = "";
@@ -250,7 +248,7 @@ public final class RevisionsIndex {
      * Extracts revisions list for provided storage key path and list of its keys.
      * @param base Base key path for the package.
      * @param keys Artipie storage keys for the package.
-     * @return Revision nuber value, or -1 if none.
+     * @return Revision number value, or -1 if none.
      */
     private static Set<Integer> extractPkgRevisions(final String base, final Collection<Key> keys) {
         return keys.stream().map(
