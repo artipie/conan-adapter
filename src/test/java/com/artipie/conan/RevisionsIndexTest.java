@@ -31,6 +31,7 @@ import com.artipie.asto.test.TestResource;
 import java.io.StringReader;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -38,6 +39,7 @@ import javax.json.JsonValue;
 import javax.json.stream.JsonParser;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -78,19 +80,19 @@ class RevisionsIndexTest {
     /**
      * Test instance.
      */
-    private RevisionsIndex index;
+    private RevisionsIndexApi index;
 
     @BeforeEach
     void setUp() {
         this.storage = new InMemoryStorage();
-        this.index = new RevisionsIndex(this.storage, "zlib/1.2.11/_/_");
+        this.index = new RevisionsIndexApi(this.storage, "zlib/1.2.11/_/_");
     }
 
     @ParameterizedTest
     @MethodSource("indexingTestFilesList")
     void updateRecipeIndex(final String[] files) {
         for (final String file : files) {
-            new TestResource(RevisionsIndexTest.DIR_PREFIX + file)
+            new TestResource(String.join("", RevisionsIndexTest.DIR_PREFIX, file))
                 .saveTo(this.storage, new Key.From(file));
         }
         final List<Integer> result = this.index.updateRecipeIndex().toCompletableFuture().join();
@@ -121,7 +123,7 @@ class RevisionsIndexTest {
     @MethodSource("indexingTestFilesList")
     void updateBinaryIndex(final String[] files) {
         for (final String file : files) {
-            new TestResource(RevisionsIndexTest.DIR_PREFIX + file)
+            new TestResource(String.join("", RevisionsIndexTest.DIR_PREFIX, file))
                 .saveTo(this.storage, new Key.From(file));
         }
         final List<Integer> result = this.index.updateBinaryIndex(
@@ -150,12 +152,99 @@ class RevisionsIndexTest {
         );
     }
 
+    @Test
+    void recipeInfoTest() {
+        new TestResource(RevisionsIndexTest.DIR_PREFIX).addFilesTo(this.storage, Key.ROOT);
+        final List<Integer> revs = this.index.getRecipeRevisions().toCompletableFuture().join();
+        MatcherAssert.assertThat("Expect 1 recipe rev.", revs.size() == 1);
+        MatcherAssert.assertThat("rev[0] == 0", revs.get(0) == 0);
+        final List<String> pkgs = this.index.getPackageList(revs.get(0))
+            .toCompletableFuture().join();
+        MatcherAssert.assertThat("Expect 1 pkg binary", pkgs.size() == 1);
+        MatcherAssert.assertThat(
+            "Got correct pkg hash",
+            Objects.equals(pkgs.get(0), RevisionsIndexTest.ZLIB_BIN_PKG)
+        );
+        final List<Integer> binrevs = this.index.getBinaryRevisions(revs.get(0), pkgs.get(0))
+            .toCompletableFuture().join();
+        MatcherAssert.assertThat("Expect 1 bin. rev.", binrevs.size() == 1);
+        MatcherAssert.assertThat("binrev[0] == 0", binrevs.get(0) == 0);
+        MatcherAssert.assertThat(
+            "Last (max) recipe rev == 0",
+            this.index.getLastRecipeRevision().join() == 0
+        );
+        MatcherAssert.assertThat(
+            "Last (max) bin. rev == 0",
+            this.index.getLastBinaryRevision(
+                0, RevisionsIndexTest.ZLIB_BIN_PKG
+            ).join() == 0
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("indexingTestFilesList")
+    void fullIndexUpdateTest(final String[] files) {
+        for (final String file : files) {
+            new TestResource(String.join("", RevisionsIndexTest.DIR_PREFIX, file))
+                .saveTo(this.storage, new Key.From(file));
+        }
+        this.index.fullIndexUpdate().toCompletableFuture().join();
+        final List<Integer> revs = this.index.getRecipeRevisions().toCompletableFuture().join();
+        final List<Integer> binrevs = this.index.getBinaryRevisions(
+            0, RevisionsIndexTest.ZLIB_BIN_PKG
+        ).toCompletableFuture().join();
+        MatcherAssert.assertThat("Expect 1 recipe rev.", revs.size() == 1);
+        MatcherAssert.assertThat("rev[0] == 0", revs.get(0) == 0);
+        MatcherAssert.assertThat("Expect 1 bin. rev.", binrevs.size() == 1);
+        MatcherAssert.assertThat("binrev[0] == 0", binrevs.get(0) == 0);
+    }
+
+    @Test
+    void recipeRevisionsUpdateTest() {
+        new TestResource(RevisionsIndexTest.DIR_PREFIX).addFilesTo(this.storage, Key.ROOT);
+        MatcherAssert.assertThat(
+            "Last recipe rev. == 0",
+            this.index.getLastRecipeRevision().join() == 0
+        );
+        this.index.addRecipeRevision(1).toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Last recipe rev == 1",
+            this.index.getLastRecipeRevision().join() == 1
+        );
+        this.index.removeRecipeRevision(1).toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Last recipe rev == 0",
+            this.index.getLastRecipeRevision().join() == 0
+        );
+    }
+
+    @Test
+    void binaryRevisionsUpdateTest() {
+        new TestResource(RevisionsIndexTest.DIR_PREFIX).addFilesTo(this.storage, Key.ROOT);
+        this.index.addBinaryRevision(0, RevisionsIndexTest.ZLIB_BIN_PKG, 1)
+            .toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Last bin. rev == 1",
+            this.index.getLastBinaryRevision(
+                0, RevisionsIndexTest.ZLIB_BIN_PKG
+            ).join() == 1
+        );
+        this.index.removeBinaryRevision(0, RevisionsIndexTest.ZLIB_BIN_PKG, 1)
+            .toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Last bin. rev == 0",
+            this.index.getLastBinaryRevision(
+                0, RevisionsIndexTest.ZLIB_BIN_PKG
+            ).join() == 0
+        );
+    }
+
     private static String getJsonStr(final JsonValue object, final String key) {
         return object.asJsonObject().get(key).toString().replaceAll("\"", "");
     }
 
     /**
-     * Returns test package files list for indexing tests - without index files (revisions.txt).
+     * Returns test package files list for indexing tests (without revisions.txt files).
      * @return List of files, as Stream of junit Arguments.
      * @checkstyle LineLengthCheck (20 lines)
      */
