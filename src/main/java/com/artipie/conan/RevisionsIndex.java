@@ -137,11 +137,10 @@ public final class RevisionsIndex {
      */
     @SuppressWarnings("unchecked")
     public CompletionStage<List<Integer>> updateRecipeIndex() {
-        final String path = String.join("", this.pkg);
         return this.doWithLock(
-            new Key.From(path), () -> this.buildIndex(
-                path, RevisionsIndex.PKG_SRC_LIST, (name, rev) -> String.join(
-                    "", path, "/", rev.toString(), "/", RevisionsIndex.SRC_SUBDIR, "/", name
+            new Key.From(this.pkg), () -> this.buildIndex(
+                this.pkg, RevisionsIndex.PKG_SRC_LIST, (name, rev) -> String.join(
+                    "/", this.pkg, rev.toString(), RevisionsIndex.SRC_SUBDIR, name
                 )
             )
         );
@@ -156,12 +155,12 @@ public final class RevisionsIndex {
     public CompletionStage<List<Integer>> updateBinaryIndex(final int reciperev,
         final String hash) {
         final String path = String.join(
-            "", this.pkg, "/", Integer.toString(reciperev),
-            "/", RevisionsIndex.BIN_SUBDIR, "/", hash
+            "/", this.pkg, Integer.toString(reciperev),
+            RevisionsIndex.BIN_SUBDIR, hash
         );
         return this.buildIndex(
             path, RevisionsIndex.PKG_BIN_LIST, (name, rev) -> String.join(
-                "", path, "/", rev.toString(), "/", name
+                "/", path, rev.toString(), name
             )
         );
     }
@@ -245,23 +244,16 @@ public final class RevisionsIndex {
     }
 
     /**
-     * Extracts revisions list for provided storage key path and list of its keys.
+     * Extracts revisions list for package, for provided its storage key base path and
+     * provided list of its items (keys), which belong to this base path under some revisions.
      * @param base Base key path for the package.
      * @param keys Artipie storage keys for the package.
      * @return Revision number value, or -1 if none.
      */
     private static Set<Integer> extractPkgRevisions(final String base, final Collection<Key> keys) {
-        return keys.stream().map(
-            key -> {
-                final String subdir = RevisionsIndex.getNextSubdir(base, key);
-                final int result;
-                if (Strings.isNullOrEmpty(subdir)) {
-                    result = -1;
-                } else {
-                    result = Integer.parseInt(subdir);
-                }
-                return result;
-            }).filter(rev -> rev >= 0).collect(Collectors.toSet());
+        return keys.stream().map(key -> RevisionsIndex.getNextSubdir(base, key))
+            .filter(subdir -> !Strings.isNullOrEmpty(subdir))
+            .map(Integer::parseInt).collect(Collectors.toSet());
     }
 
     /**
