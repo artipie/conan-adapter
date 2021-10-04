@@ -104,13 +104,16 @@ class RevisionsIndexTest {
         final String time = RevisionsIndexTest.getJsonStr(revs.get(0), "time");
         final String revision = RevisionsIndexTest.getJsonStr(revs.get(0), "revision");
         MatcherAssert.assertThat(
-            "Checking that parsed revision object fields have correct format",
+            "The revision object fields have incorrect format",
             time.length() > 0 && revision.length() > 0 && result.size() == revs.size()
         );
         MatcherAssert.assertThat(
-            "Checking that revision object fields have correct values",
+            "The revision field of revision object has incorrect value",
             result.get(0) == Integer.parseInt(revision)
-                && Instant.parse(time).getEpochSecond() > 0
+        );
+        MatcherAssert.assertThat(
+            "The time field of the revision object has incorrect value",
+            Instant.parse(time).getEpochSecond() > 0
         );
     }
 
@@ -134,13 +137,16 @@ class RevisionsIndexTest {
         final String time = RevisionsIndexTest.getJsonStr(revs.get(0), "time");
         final String revision = RevisionsIndexTest.getJsonStr(revs.get(0), "revision");
         MatcherAssert.assertThat(
-            "Checking that parsed revision object fields have correct format",
+            "The revision object fields have incorrect format",
             time.length() > 0 && revision.length() > 0 && result.size() == revs.size()
         );
         MatcherAssert.assertThat(
-            "Checking that revision object fields have correct values",
+            "The revision field of revision object has incorrect value",
             result.get(0) == Integer.parseInt(revision)
-                && Instant.parse(time).getEpochSecond() > 0
+        );
+        MatcherAssert.assertThat(
+            "The time field of the revision object has incorrect value",
+            Instant.parse(time).getEpochSecond() > 0
         );
     }
 
