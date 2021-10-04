@@ -155,7 +155,7 @@ class RevisionsIndexTest {
     }
 
     /**
-     * Returns test files list for indexing tests.
+     * Returns test package files list for indexing tests - without index files (revisions.txt).
      * @return List of files, as Stream of junit Arguments.
      * @checkstyle LineLengthCheck (20 lines)
      */
