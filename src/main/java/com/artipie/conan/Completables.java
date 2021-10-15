@@ -37,7 +37,8 @@ import java.util.stream.Collectors;
 public final class Completables {
 
     /**
-     * Coverts List of CompletableFutures to CompletableFuture providing list or array with results.
+     * Converts List of CompletableFutures with results to CompletableFuture which provides
+     * list or array with results.
      * @param <T> Type of the results.
      * @since 0.1
      */
@@ -89,7 +90,8 @@ public final class Completables {
     }
 
     /**
-     * Coverts List of Tuples with CompletableFutures to CompletableFuture providing list of Tuples.
+     * Converts List of Tuples with CompletableFutures to CompletableFuture providing
+     * list of Tuples.
      * @param <K> Key type for the CompletableFuture result value.
      * @param <V> Type of the result value.
      * @since 0.1
