@@ -69,7 +69,7 @@ public class RevisionsIndexer {
      * @return CompletableFuture with recipe revisions list.
      */
     @SuppressWarnings("PMD.UseVarargs")
-    public CompletableFuture<List<Integer>> buildIndex(final Key key,
+    public CompletionStage<List<Integer>> buildIndex(final Key key,
         final List<String> pkgfiles, final BiFunction<String, Integer, Key> generator) {
         final CompletionStage<List<Integer>> revisions = new PackageList(this.storage).get(
             key
@@ -92,11 +92,11 @@ public class RevisionsIndexer {
             revs -> {
                 final JsonArrayBuilder builder = Json.createArrayBuilder();
                 revs.stream().map(rev -> new PkgRev(rev).toJson()).forEach(builder::add);
-                final Key revkey = new Key.From("/", key.string(), RevisionsIndexer.INDEX_FILE);
+                final Key revkey = new Key.From(key.string(), RevisionsIndexer.INDEX_FILE);
                 return this.storage.save(
                     new Key.From(revkey), new RevContent(builder.build()).toContent()
                 ).thenApply(nothing -> revs);
-            }).toCompletableFuture();
+            });
     }
 
     /**

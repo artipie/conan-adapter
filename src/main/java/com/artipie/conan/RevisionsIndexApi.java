@@ -30,7 +30,6 @@ import com.artipie.asto.lock.storage.StorageLock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
@@ -86,7 +85,7 @@ public final class RevisionsIndexApi {
         return this.doWithLock(
             this.pkgkey, () -> this.indexer.buildIndex(
                 this.pkgkey, PackageList.PKG_SRC_LIST, (name, rev) -> new Key.From(
-                    "/", this.pkgkey.string(), rev.toString(), RevisionsIndexApi.SRC_SUBDIR, name
+                    this.pkgkey.string(), rev.toString(), RevisionsIndexApi.SRC_SUBDIR, name
                 )
             ));
     }
@@ -100,13 +99,13 @@ public final class RevisionsIndexApi {
     public CompletionStage<List<Integer>> updateBinaryIndex(final int reciperev,
         final String hash) {
         final Key key = new Key.From(
-            "/", this.pkgkey.string(), Integer.toString(reciperev),
+            this.pkgkey.string(), Integer.toString(reciperev),
             RevisionsIndexApi.BIN_SUBDIR, hash
         );
         return this.doWithLock(
             this.pkgkey, () -> this.indexer.buildIndex(
                 key, PackageList.PKG_BIN_LIST, (name, rev) -> new Key.From(
-                    "/", key.string(), rev.toString(), name
+                    key.string(), rev.toString(), name
                 )
             ));
     }
@@ -118,7 +117,7 @@ public final class RevisionsIndexApi {
      * @param <T> Return type for operation's CompletableFuture.
      * @return Completion of operation and lock.
      */
-    private <T> CompletableFuture<T> doWithLock(final Key target,
+    private <T> CompletionStage<T> doWithLock(final Key target,
         final Supplier<CompletionStage<T>> operation) {
         final Lock lock = new StorageLock(
             this.storage, target, Instant.now().plus(Duration.ofHours(1))
@@ -128,6 +127,6 @@ public final class RevisionsIndexApi {
                 result -> {
                     lock.release();
                     return result;
-                })).toCompletableFuture();
+                }));
     }
 }

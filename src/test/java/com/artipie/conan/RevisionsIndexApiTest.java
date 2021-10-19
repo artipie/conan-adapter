@@ -52,23 +52,23 @@ class RevisionsIndexApiTest {
     /**
      * ZLIB binary package dir. name (hash).
      */
-    static final String ZLIB_BIN_PKG = "6af9cc7cb931c5ad942174fd7838eb655717c709";
+    private static final String ZLIB_BIN_PKG = "6af9cc7cb931c5ad942174fd7838eb655717c709";
 
     /**
      * Path to zlib package binary index file.
      */
-    static final String ZLIB_BIN_INDEX =
+    private static final String ZLIB_BIN_INDEX =
         "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/revisions.txt";
 
     /**
      * Path to zlib package recipe index file.
      */
-    static final String ZLIB_SRC_INDEX = "zlib/1.2.11/_/_/revisions.txt";
+    private static final String ZLIB_SRC_INDEX = "zlib/1.2.11/_/_/revisions.txt";
 
     /**
      * Path prefix for conan repository test data.
      */
-    static final String DIR_PREFIX = "conan-test/data/";
+    private static final String DIR_PREFIX = "conan-test/data/";
 
     /**
      * Test storage.

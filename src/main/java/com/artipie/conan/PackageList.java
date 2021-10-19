@@ -33,7 +33,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 
 /**
- * Lists binary packages of Conan package.
+ * Lists sub packages of Conan package.
  * @since 0.1
  */
 public class PackageList {
@@ -79,9 +79,9 @@ public class PackageList {
     }
 
     /**
-     * Returns binary packages list (of hashes) for given recipe revision.
+     * Returns subpackages list of names for given package key.
      * @param pkgkey Full Storage key value for the package.
-     * @return CompletionStage with the list of package binaries (hashes) as strings.
+     * @return CompletionStage with the list of subpackage names as strings.
      */
     public CompletionStage<List<String>> get(final Key pkgkey) {
         return this.storage.list(new Key.From(pkgkey)).thenApply(
