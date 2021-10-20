@@ -25,7 +25,7 @@ package com.artipie.conan;
 
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
-import com.artipie.asto.ext.PublisherAs;
+import com.artipie.asto.blocking.BlockingStorage;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
 import java.io.StringReader;
@@ -111,11 +111,10 @@ class RevisionsIndexerTest {
             pkgkey, PackageList.PKG_SRC_LIST, (name, rev) -> new Key.From(
                 pkgkey.string(), rev.toString(), RevisionsIndexerTest.SRC_SUBDIR, name
             )).toCompletableFuture().join();
-        final JsonParser parser = this.storage.value(
-            new Key.From(RevisionsIndexerTest.ZLIB_SRC_INDEX)
-        ).thenCompose(content -> new PublisherAs(content).asciiString()).thenApply(
-            str -> Json.createParser(new StringReader(str))
-        ).join();
+        final Key key = new Key.From(RevisionsIndexerTest.ZLIB_SRC_INDEX);
+        final JsonParser parser = Json.createParser(
+            new StringReader(new String(new BlockingStorage(this.storage).value(key)))
+        );
         parser.next();
         final JsonArray revs = parser.getObject().getJsonArray("revisions");
         final String time = RevisionsIndexerTest.getJsonStr(revs.get(0), "time");
