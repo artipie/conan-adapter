@@ -23,7 +23,10 @@
  */
 package com.artipie.conan;
 
+import com.artipie.asto.Key;
+import com.artipie.asto.Storage;
 import com.artipie.asto.memory.InMemoryStorage;
+import com.artipie.asto.test.TestResource;
 import java.util.Arrays;
 import java.util.List;
 import org.hamcrest.MatcherAssert;
@@ -31,12 +34,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests for RevisionsIndexCoreTest class.
+ * Tests for RevisionsIndexCore class.
  * @since 0.1
  * @checkstyle MagicNumberCheck (199 lines)
  */
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class RevisionsIndexCoreTest {
+
+    /**
+     * Test storage.
+     */
+    private Storage storage;
 
     /**
      * Test instance.
@@ -45,36 +53,48 @@ class RevisionsIndexCoreTest {
 
     @BeforeEach
     public void setUp() {
-        this.core = new RevisionsIndexCore(new InMemoryStorage());
+        this.storage = new InMemoryStorage();
+        this.core = new RevisionsIndexCore(this.storage);
     }
 
     @Test
     public void noRevdataSize() {
-        final String path = "revisions.new";
+        final Key key = new Key.From("revisions.new");
         MatcherAssert.assertThat(
             "Revisions list size is incorrect",
-            this.core.getRevisions(path).toCompletableFuture().join().size() == 0
+            this.core.getRevisions(key).toCompletableFuture().join().size() == 0
         );
     }
 
     @Test
     public void emptyRevdataSize() {
-        final String path = "revisions.new";
-        this.core.addToRevdata(0, path).join();
-        this.core.removeRevision(0, path).join();
+        final Key key = new Key.From("revisions.new");
+        this.core.addToRevdata(0, key).join();
+        this.core.removeRevision(0, key).join();
         MatcherAssert.assertThat(
             "Revisions list size is incorrect",
-            this.core.getRevisions(path).toCompletableFuture().join().size() == 0
+            this.core.getRevisions(key).toCompletableFuture().join().size() == 0
+        );
+    }
+
+    @Test
+    public void getRevisions() {
+        final Key key = new Key.From("revisions.new");
+        new TestResource("conan-test/revisions.3.txt").saveTo(this.storage, key);
+        final List<Integer> revs = this.core.getRevisions(key).toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Revisions list contents is incorrect",
+            revs.equals(Arrays.asList(1, 2, 3))
         );
     }
 
     @Test
     public void fillNewRevdata() {
-        final String path = "revisions.new";
-        this.core.addToRevdata(1, path).join();
-        this.core.addToRevdata(2, path).join();
-        this.core.addToRevdata(3, path).join();
-        final List<Integer> revs = this.core.getRevisions(path).toCompletableFuture().join();
+        final Key key = new Key.From("revisions.new");
+        this.core.addToRevdata(1, key).join();
+        this.core.addToRevdata(2, key).join();
+        this.core.addToRevdata(3, key).join();
+        final List<Integer> revs = this.core.getRevisions(key).toCompletableFuture().join();
         MatcherAssert.assertThat(
             "Revisions list size is incorrect",
             revs.size() == 3
@@ -87,61 +107,61 @@ class RevisionsIndexCoreTest {
 
     @Test
     public void removeFromNoRevdata() {
-        final String path = "revisions.new";
-        this.core.removeRevision(0, path).join();
+        final Key key = new Key.From("revisions.new");
+        this.core.removeRevision(0, key).join();
         MatcherAssert.assertThat(
             "Revisions list size is incorrect",
-            this.core.getRevisions(path).toCompletableFuture().join().size() == 0
+            this.core.getRevisions(key).toCompletableFuture().join().size() == 0
         );
     }
 
     @Test
     public void removeFromEmptyRevdata() {
-        final String path = "revisions.new";
-        this.core.addToRevdata(0, path).join();
-        this.core.removeRevision(0, path).join();
-        this.core.removeRevision(0, path).join();
+        final Key key = new Key.From("revisions.new");
+        this.core.addToRevdata(0, key).join();
+        this.core.removeRevision(0, key).join();
+        this.core.removeRevision(0, key).join();
         MatcherAssert.assertThat(
             "Revisions list size is incorrect",
-            this.core.getRevisions(path).toCompletableFuture().join().size() == 0
+            this.core.getRevisions(key).toCompletableFuture().join().size() == 0
         );
     }
 
     @Test
     public void removeFromRevdata() {
-        final String path = "revisions.new";
-        this.core.addToRevdata(0, path).join();
-        this.core.addToRevdata(1, path).join();
-        this.core.addToRevdata(2, path).join();
-        this.core.removeRevision(1, path).join();
+        final Key key = new Key.From("revisions.new");
+        this.core.addToRevdata(0, key).join();
+        this.core.addToRevdata(1, key).join();
+        this.core.addToRevdata(2, key).join();
+        this.core.removeRevision(1, key).join();
         MatcherAssert.assertThat(
             "Revisions list size is incorrect",
-            this.core.getRevisions(path).toCompletableFuture().join().size() == 2
+            this.core.getRevisions(key).toCompletableFuture().join().size() == 2
         );
         MatcherAssert.assertThat(
             "Revisions list contents is incorrect",
-            this.core.getRevisions(path).toCompletableFuture().join().equals(Arrays.asList(0, 2))
+            this.core.getRevisions(key).toCompletableFuture().join().equals(Arrays.asList(0, 2))
         );
     }
 
     @Test
     public void emptyRevValue() {
-        final String path = "revisions.new";
+        final Key key = new Key.From("revisions.new");
         MatcherAssert.assertThat(
             "Revision value is incorrect",
-            this.core.getLastRev(path).toCompletableFuture().join().equals(-1)
+            this.core.getLastRev(key).toCompletableFuture().join().equals(-1)
         );
     }
 
     @Test
     public void lastRevValue() {
-        final String path = "revisions.new";
-        this.core.addToRevdata(1, path).join();
-        this.core.addToRevdata(3, path).join();
-        this.core.addToRevdata(2, path).join();
+        final Key key = new Key.From("revisions.new");
+        this.core.addToRevdata(1, key).join();
+        this.core.addToRevdata(3, key).join();
+        this.core.addToRevdata(2, key).join();
         MatcherAssert.assertThat(
             "Revision value is incorrect",
-            this.core.getLastRev(path).toCompletableFuture().join().equals(3)
+            this.core.getLastRev(key).toCompletableFuture().join().equals(3)
         );
     }
 }

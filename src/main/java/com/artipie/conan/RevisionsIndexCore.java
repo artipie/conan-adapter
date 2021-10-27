@@ -36,7 +36,6 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonValue;
-import javax.json.stream.JsonParser;
 
 /**
  * Conan V2 API basic revisions index update methods.
@@ -71,25 +70,18 @@ public class RevisionsIndexCore {
 
     /**
      * Loads revisions data array from index file.
-     * @param revpath Path to revisions index.
+     * @param key Key for the revisions index.
      * @return CompletableFuture with revisions data as JsonArray.
      */
-    public CompletableFuture<JsonArray> loadRevisionData(final Key revpath) {
-        return this.storage.exists(revpath).thenCompose(
+    public CompletableFuture<JsonArray> loadRevisionData(final Key key) {
+        return this.storage.exists(key).thenCompose(
             exist -> {
                 final CompletableFuture<JsonArray> revs;
                 if (exist) {
-                    revs = this.storage.value(revpath).thenCompose(
+                    revs = this.storage.value(key).thenCompose(
                         content -> new PublisherAs(content).asciiString().thenApply(
-                            string -> {
-                                final JsonParser parser = Json.createParser(
-                                    new StringReader(string)
-                                );
-                                parser.next();
-                                final JsonArray revisions = parser.getObject()
-                                    .getJsonArray(RevisionsIndexCore.REVISIONS);
-                                return revisions;
-                            }));
+                            string -> Json.createReader(new StringReader(string)).readObject()
+                                .getJsonArray(RevisionsIndexCore.REVISIONS)));
                 } else {
                     revs = CompletableFuture.completedFuture(Json.createArrayBuilder().build());
                 }
@@ -100,11 +92,11 @@ public class RevisionsIndexCore {
 
     /**
      * Returns last (max) index file revision value.
-     * @param path Path to revisions index.
-     * @return CompletableFuture with index file revision as Integer.
+     * @param key Key for the revisions index.
+     * @return CompletableFuture with index file revision as Integer, or -1 if there's none.
      */
-    public CompletableFuture<Integer> getLastRev(final String path) {
-        return this.loadRevisionData(new Key.From(path)).thenApply(
+    public CompletableFuture<Integer> getLastRev(final Key key) {
+        return this.loadRevisionData(key).thenApply(
             array -> {
                 final Optional<JsonValue> max = array.stream().max(
                     (val1, val2) -> {
@@ -114,22 +106,20 @@ public class RevisionsIndexCore {
                             .getString(RevisionsIndexCore.REVISION);
                         return Integer.parseInt(revx) - Integer.parseInt(revy);
                     });
-                final int revision = max.map(
+                return max.map(
                     jsonValue -> Integer.parseInt(
                         RevisionsIndexCore.getJsonStr(jsonValue, RevisionsIndexCore.REVISION)
                     )).orElse(-1);
-                return revision;
             });
     }
 
     /**
      * Add new revision to the specified index file.
      * @param revision New revision number.
-     * @param path Path to the revisions index file.
+     * @param key Key for the revisions index file.
      * @return CompletionStage for this operation.
      */
-    public CompletableFuture<Void> addToRevdata(final int revision, final String path) {
-        final Key key = new Key.From(path);
+    public CompletableFuture<Void> addToRevdata(final int revision, final Key key) {
         return this.loadRevisionData(key).thenCompose(
             array -> {
                 final int index = RevisionsIndexCore.jsonIndexOf(
@@ -147,11 +137,10 @@ public class RevisionsIndexCore {
     /**
      * Removes specified revision from index file.
      * @param revision Revision number.
-     * @param path Path to the index file.
+     * @param key Key for the index file.
      * @return CompletionStage with boolean == true if recipe & revision were found.
      */
-    public CompletableFuture<Boolean> removeRevision(final int revision, final String path) {
-        final Key key = new Key.From(path);
+    public CompletableFuture<Boolean> removeRevision(final int revision, final Key key) {
         return this.storage.exists(key).thenCompose(
             exist -> {
                 final CompletableFuture<Boolean> revs;
@@ -170,19 +159,16 @@ public class RevisionsIndexCore {
 
     /**
      * Returns list of revisions for the recipe.
-     * @param path Path to the revisions index file.
+     * @param key Key to the revisions index file.
      * @return CompletionStage with the list.
      */
-    public CompletionStage<List<Integer>> getRevisions(final String path) {
-        return this.loadRevisionData(new Key.From(path))
+    public CompletionStage<List<Integer>> getRevisions(final Key key) {
+        return this.loadRevisionData(key)
             .thenApply(
-                array -> {
-                    final List<Integer> revs = array.stream().map(
-                        value -> Integer.parseInt(
-                            RevisionsIndexCore.getJsonStr(value, RevisionsIndexCore.REVISION)
-                        )).collect(Collectors.toList());
-                    return revs;
-                });
+                array -> array.stream().map(
+                    value -> Integer.parseInt(
+                        RevisionsIndexCore.getJsonStr(value, RevisionsIndexCore.REVISION)
+                    )).collect(Collectors.toList()));
     }
 
     /**
@@ -205,11 +191,11 @@ public class RevisionsIndexCore {
     private CompletableFuture<Boolean> removeRevData(final String content, final int revision,
         final Key target) {
         final CompletableFuture<Boolean> result;
-        final JsonParser parser = Json.createParser(new StringReader(content));
-        parser.next();
-        final JsonArray revisions = parser.getObject().getJsonArray(RevisionsIndexCore.REVISIONS);
-        final int index = RevisionsIndexCore
-            .jsonIndexOf(revisions, RevisionsIndexCore.REVISION, revision);
+        final JsonArray revisions = Json.createReader(new StringReader(content)).readObject()
+            .getJsonArray(RevisionsIndexCore.REVISIONS);
+        final int index = RevisionsIndexCore.jsonIndexOf(
+            revisions, RevisionsIndexCore.REVISION, revision
+        );
         final JsonArrayBuilder updated = Json.createArrayBuilder(revisions);
         if (index >= 0) {
             updated.remove(index);
