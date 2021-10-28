@@ -30,6 +30,7 @@ import com.artipie.asto.lock.storage.StorageLock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
@@ -42,6 +43,11 @@ import java.util.function.Supplier;
 public final class RevisionsIndexApi {
 
     /**
+     * Revisions index file name.
+     */
+    private static final String INDEX_FILE = "revisions.txt";
+
+    /**
      * Package recipe (sources) subdir name.
      */
     private static final String SRC_SUBDIR = "export";
@@ -52,9 +58,19 @@ public final class RevisionsIndexApi {
     private static final String BIN_SUBDIR = "package";
 
     /**
+     * RevisionsIndex core logic.
+     */
+    private final RevisionsIndexCore core;
+
+    /**
      * Revision info indexer.
      */
     private final RevisionsIndexer indexer;
+
+    /**
+     * Revision info indexer.
+     */
+    private final FullIndexer fullindexer;
 
     /**
      * Current Artipie storage instance.
@@ -74,7 +90,9 @@ public final class RevisionsIndexApi {
     public RevisionsIndexApi(final Storage storage, final Key pkgkey) {
         this.storage = storage;
         this.pkgkey = pkgkey;
+        this.core = new RevisionsIndexCore(storage);
         this.indexer = new RevisionsIndexer(storage);
+        this.fullindexer = new FullIndexer(storage, this.indexer);
     }
 
     /**
@@ -108,6 +126,142 @@ public final class RevisionsIndexApi {
                     key.string(), rev.toString(), name
                 )
             ));
+    }
+
+    /**
+     * Add new revision to the recipe index.
+     * @param revision Revision number.
+     * @return CompletionStage for this operation.
+     */
+    public CompletionStage<Void> addRecipeRevision(final int revision) {
+        final Key key = this.getRecipeRevkey();
+        return this.doWithLock(
+            new Key.From(key), () -> this.core.addToRevdata(revision, key)
+        );
+    }
+
+    /**
+     * Returns list of revisions for the recipe.
+     * @return CompletionStage with the list.
+     */
+    public CompletionStage<List<Integer>> getRecipeRevisions() {
+        return this.core.getRevisions(this.getRecipeRevkey());
+    }
+
+    /**
+     * Returns list of revisions for the package binary.
+     * @param reciperev Recipe revision number.
+     * @param hash Target package binary hash.
+     * @return CompletionStage with the list.
+     */
+    public CompletionStage<List<Integer>> getBinaryRevisions(final int reciperev,
+        final String hash) {
+        return this.core.getRevisions(this.getBinaryRevkey(reciperev, hash));
+    }
+
+    /**
+     * Removes specified revision from index file of package recipe.
+     * @param revision Revision number.
+     * @return CompletionStage with boolean == true if recipe & revision were found.
+     */
+    public CompletionStage<Boolean> removeRecipeRevision(final int revision) {
+        final Key key = this.getRecipeRevkey();
+        return this.doWithLock(
+            new Key.From(key), () -> this.core.removeRevision(revision, key)
+        );
+    }
+
+    /**
+     * Creates full storage key to the recipe revisions file. Should be private later.
+     * @return Recipe revisions index file in the storage, as Key.
+     */
+    public Key getRecipeRevkey() {
+        return new Key.From(this.pkgkey, RevisionsIndexApi.INDEX_FILE);
+    }
+
+    /**
+     * Returns last (max) recipe revision value.
+     * @return CompletableFuture with recipe revision as Integer.
+     */
+    public CompletableFuture<Integer> getLastRecipeRevision() {
+        return this.core.getLastRev(this.getRecipeRevkey());
+    }
+
+    /**
+     * Returns last (max) revision number for binary revision index.
+     * @param reciperev Recipe revision number.
+     * @param hash Target package binary hash.
+     * @return CompletableFuture with recipe revision as Integer.
+     */
+    public CompletableFuture<Integer> getLastBinaryRevision(final int reciperev,
+        final String hash) {
+        return this.core.getLastRev(this.getBinaryRevkey(reciperev, hash));
+    }
+
+    /**
+     * Creates full storage key to the binary revisions file. Should be private later.
+     * @param reciperev Recipe revision number.
+     * @param hash Target package binary hash.
+     * @return Binary revisions index file in the storage, as Key.
+     */
+    public Key getBinaryRevkey(final int reciperev, final String hash) {
+        return new Key.From(
+            this.pkgkey, Integer.toString(reciperev), RevisionsIndexApi.BIN_SUBDIR,
+            hash, RevisionsIndexApi.INDEX_FILE
+        );
+    }
+
+    /**
+     * Updates binary index file. Fully recursive.
+     * Does updateRecipeIndex(), then for each revision & for each pkg binary updateBinaryIndex().
+     * @return CompletionStage to handle operation completion.
+     */
+    public CompletionStage<Void> fullIndexUpdate() {
+        return this.doWithLock(
+            new Key.From(this.pkgkey), () -> this.fullindexer.fullIndexUpdate(this.pkgkey)
+        );
+    }
+
+    /**
+     * Removes specified revision from index file of package binary.
+     * @param reciperev Recipe revision number.
+     * @param hash Target package binary hash.
+     * @param revision Revision number of the binary.
+     * @return CompletionStage with boolean == true if recipe & revision were found.
+     */
+    public CompletionStage<Boolean> removeBinaryRevision(final int reciperev, final String hash,
+        final int revision) {
+        final Key key = this.getBinaryRevkey(reciperev, hash);
+        return this.doWithLock(
+            new Key.From(key), () -> this.core.removeRevision(revision, key)
+        );
+    }
+
+    /**
+     * Returns binary packages list (of hashes) for given recipe revision.
+     * @param reciperev Revision number of the recipe.
+     * @return CompletionStage with the list of package binaries (hashes) as strings.
+     */
+    public CompletionStage<List<String>> getPackageList(final int reciperev) {
+        final Key key = new Key.From(
+            this.pkgkey, Integer.toString(reciperev), RevisionsIndexApi.BIN_SUBDIR
+        );
+        return new PackageList(this.storage).get(key);
+    }
+
+    /**
+     * Add binary revision to the index.
+     * @param reciperev Recipe revision number.
+     * @param hash Package binary hash.
+     * @param revision Package binary revision.
+     * @return CompletionStage to handle operation completion.
+     */
+    public CompletionStage<Void> addBinaryRevision(final int reciperev, final String hash,
+        final int revision) {
+        final Key key = this.getBinaryRevkey(reciperev, hash);
+        return this.doWithLock(
+            new Key.From(key), () -> this.core.addToRevdata(revision, key)
+        );
     }
 
     /**
