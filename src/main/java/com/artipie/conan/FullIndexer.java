@@ -107,21 +107,8 @@ public class FullIndexer {
             )
             .parallel().runOn(Schedulers.io())
             .sequential().observeOn(Schedulers.io());
-        return fromFlowable(flowable).thenCompose(
+        return flowable.toList().to(SingleInterop.get()).thenCompose(
             unused -> CompletableFuture.completedFuture(null)
         );
-    }
-
-    /**
-     * Creates java's CompletableFuture from reactivex's Flowable.
-     * @param flowable Flowable object to wrap.
-     * @param <T> The type of the items for Flowable/CompletableFuture.
-     * @return CompletableFuture instance, which wraps flowable and provides its results.
-     */
-    private static <T> CompletableFuture<List<T>> fromFlowable(final Flowable<T> flowable) {
-        final CompletableFuture<List<T>> future = new CompletableFuture<>();
-        flowable.doOnError(future::completeExceptionally).toList()
-            .toObservable().forEach(future::complete);
-        return future;
     }
 }
