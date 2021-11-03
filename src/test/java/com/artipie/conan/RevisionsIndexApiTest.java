@@ -31,6 +31,7 @@ import com.artipie.asto.test.TestResource;
 import java.io.StringReader;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -38,6 +39,7 @@ import javax.json.JsonValue;
 import javax.json.stream.JsonParser;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -145,6 +147,114 @@ class RevisionsIndexApiTest {
         MatcherAssert.assertThat(
             "The time field of the revision object has incorrect value",
             Instant.parse(time).getEpochSecond() > 0
+        );
+    }
+
+    @Test
+    void getRecipeRevisions() {
+        new TestResource(RevisionsIndexApiTest.DIR_PREFIX).addFilesTo(this.storage, Key.ROOT);
+        final List<Integer> revs = this.index.getRecipeRevisions().toCompletableFuture().join();
+        MatcherAssert.assertThat("Expect 1 recipe revision", revs.size() == 1);
+        MatcherAssert.assertThat("rev[0] must be zero", revs.get(0) == 0);
+    }
+
+    @Test
+    void getBinaryRevisions() {
+        new TestResource(RevisionsIndexApiTest.DIR_PREFIX).addFilesTo(this.storage, Key.ROOT);
+        final List<Integer> binrevs = this.index.getBinaryRevisions(
+            0, RevisionsIndexApiTest.ZLIB_BIN_PKG
+            ).toCompletableFuture().join();
+        MatcherAssert.assertThat("Expect 1 binary revision", binrevs.size() == 1);
+        MatcherAssert.assertThat("binrev must be zero", binrevs.get(0) == 0);
+    }
+
+    @Test
+    void getPackageList() {
+        new TestResource(RevisionsIndexApiTest.DIR_PREFIX).addFilesTo(this.storage, Key.ROOT);
+        final List<String> pkgs = this.index.getPackageList(0)
+            .toCompletableFuture().join();
+        MatcherAssert.assertThat("Expect 1 package binary", pkgs.size() == 1);
+        MatcherAssert.assertThat(
+            "Got correct package binary hash",
+            Objects.equals(pkgs.get(0), RevisionsIndexApiTest.ZLIB_BIN_PKG)
+        );
+    }
+
+    @Test
+    void getLastRecipeRevision() {
+        new TestResource(RevisionsIndexApiTest.DIR_PREFIX).addFilesTo(this.storage, Key.ROOT);
+        MatcherAssert.assertThat(
+            "Last (max) recipe revison must be zero",
+            this.index.getLastRecipeRevision().join() == 0
+        );
+    }
+
+    @Test
+    void getLastBinaryRevision() {
+        new TestResource(RevisionsIndexApiTest.DIR_PREFIX).addFilesTo(this.storage, Key.ROOT);
+        MatcherAssert.assertThat(
+            "Last (max) binary revision must be zero",
+            this.index.getLastBinaryRevision(
+                0, RevisionsIndexApiTest.ZLIB_BIN_PKG
+            ).join() == 0
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("indexingTestFilesList")
+    void fullIndexUpdateTest(final String[] files) {
+        for (final String file : files) {
+            new TestResource(String.join("", RevisionsIndexApiTest.DIR_PREFIX, file))
+                .saveTo(this.storage, new Key.From(file));
+        }
+        this.index.fullIndexUpdate().toCompletableFuture().join();
+        final List<Integer> revs = this.index.getRecipeRevisions().toCompletableFuture().join();
+        final List<Integer> binrevs = this.index.getBinaryRevisions(
+            0, RevisionsIndexApiTest.ZLIB_BIN_PKG
+        ).toCompletableFuture().join();
+        MatcherAssert.assertThat("Expect 1 recipe revision", revs.size() == 1);
+        MatcherAssert.assertThat("rev[0] must be zero", revs.get(0) == 0);
+        MatcherAssert.assertThat("Expect 1 binary revision", binrevs.size() == 1);
+        MatcherAssert.assertThat("binrev[0] must be zero", binrevs.get(0) == 0);
+    }
+
+    @Test
+    void recipeRevisionsUpdateTest() {
+        new TestResource(RevisionsIndexApiTest.DIR_PREFIX).addFilesTo(this.storage, Key.ROOT);
+        MatcherAssert.assertThat(
+            "Last recipe revision must be zero",
+            this.index.getLastRecipeRevision().join() == 0
+        );
+        this.index.addRecipeRevision(1).toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Last recipe revision must be 1",
+            this.index.getLastRecipeRevision().join() == 1
+        );
+        this.index.removeRecipeRevision(1).toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Last recipe revision must be zero",
+            this.index.getLastRecipeRevision().join() == 0
+        );
+    }
+
+    @Test
+    void binaryRevisionsUpdateTest() {
+        new TestResource(RevisionsIndexApiTest.DIR_PREFIX).addFilesTo(this.storage, Key.ROOT);
+        this.index.addBinaryRevision(0, RevisionsIndexApiTest.ZLIB_BIN_PKG, 1)
+            .toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Last binary revision must be 1",
+            this.index.getLastBinaryRevision(
+                0, RevisionsIndexApiTest.ZLIB_BIN_PKG
+            ).join() == 1
+        );
+        this.index.removeBinaryRevision(0, RevisionsIndexApiTest.ZLIB_BIN_PKG, 1)
+            .toCompletableFuture().join();
+        MatcherAssert.assertThat(
+            "Last binary revision must be zero",
+            this.index.getLastBinaryRevision(
+                0, RevisionsIndexApiTest.ZLIB_BIN_PKG
+            ).join() == 0
         );
     }
 
