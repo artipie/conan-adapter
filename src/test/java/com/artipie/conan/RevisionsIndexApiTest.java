@@ -163,7 +163,7 @@ class RevisionsIndexApiTest {
         new TestResource(RevisionsIndexApiTest.DIR_PREFIX).addFilesTo(this.storage, Key.ROOT);
         final List<Integer> binrevs = this.index.getBinaryRevisions(
             0, RevisionsIndexApiTest.ZLIB_BIN_PKG
-            ).toCompletableFuture().join();
+        ).toCompletableFuture().join();
         MatcherAssert.assertThat("Expect 1 binary revision", binrevs.size() == 1);
         MatcherAssert.assertThat("binrev must be zero", binrevs.get(0) == 0);
     }
