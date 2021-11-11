@@ -186,7 +186,7 @@ public final class RevisionsIndexApi {
      * @return CompletionStage with the list.
      */
     public CompletionStage<List<Integer>> getBinaryRevisions(final int reciperev,
-                                                             final String hash) {
+        final String hash) {
         return this.core.getRevisions(this.getBinaryRevkey(reciperev, hash));
     }
 
