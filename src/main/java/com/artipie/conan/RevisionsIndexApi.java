@@ -85,7 +85,7 @@ public final class RevisionsIndexApi {
     /**
      * Initializes new instance.
      * @param storage Current Artipie storage instance.
-     * @param pkgkey Package key (full name).
+     * @param pkgkey Package key for repository package data (full name).
      */
     public RevisionsIndexApi(final Storage storage, final Key pkgkey) {
         this.storage = storage;
@@ -129,6 +129,17 @@ public final class RevisionsIndexApi {
     }
 
     /**
+     * Updates binary index file. Fully recursive.
+     * Does updateRecipeIndex(), then for each revision & for each pkg binary updateBinaryIndex().
+     * @return CompletionStage to handle operation completion.
+     */
+    public CompletionStage<Void> fullIndexUpdate() {
+        return this.doWithLock(
+            new Key.From(this.pkgkey), () -> this.fullindexer.fullIndexUpdate(this.pkgkey)
+        );
+    }
+
+    /**
      * Add new revision to the recipe index.
      * @param revision Revision number.
      * @return CompletionStage for this operation.
@@ -149,17 +160,6 @@ public final class RevisionsIndexApi {
     }
 
     /**
-     * Returns list of revisions for the package binary.
-     * @param reciperev Recipe revision number.
-     * @param hash Target package binary hash.
-     * @return CompletionStage with the list.
-     */
-    public CompletionStage<List<Integer>> getBinaryRevisions(final int reciperev,
-        final String hash) {
-        return this.core.getRevisions(this.getBinaryRevkey(reciperev, hash));
-    }
-
-    /**
      * Removes specified revision from index file of package recipe.
      * @param revision Revision number.
      * @return CompletionStage with boolean == true if recipe & revision were found.
@@ -172,19 +172,22 @@ public final class RevisionsIndexApi {
     }
 
     /**
-     * Creates full storage key to the recipe revisions file. Should be private later.
-     * @return Recipe revisions index file in the storage, as Key.
-     */
-    public Key getRecipeRevkey() {
-        return new Key.From(this.pkgkey, RevisionsIndexApi.INDEX_FILE);
-    }
-
-    /**
      * Returns last (max) recipe revision value.
      * @return CompletableFuture with recipe revision as Integer.
      */
     public CompletableFuture<Integer> getLastRecipeRevision() {
         return this.core.getLastRev(this.getRecipeRevkey());
+    }
+
+    /**
+     * Returns list of revisions for the package binary.
+     * @param reciperev Recipe revision number.
+     * @param hash Target package binary hash.
+     * @return CompletionStage with the list.
+     */
+    public CompletionStage<List<Integer>> getBinaryRevisions(final int reciperev,
+                                                             final String hash) {
+        return this.core.getRevisions(this.getBinaryRevkey(reciperev, hash));
     }
 
     /**
@@ -196,30 +199,6 @@ public final class RevisionsIndexApi {
     public CompletableFuture<Integer> getLastBinaryRevision(final int reciperev,
         final String hash) {
         return this.core.getLastRev(this.getBinaryRevkey(reciperev, hash));
-    }
-
-    /**
-     * Creates full storage key to the binary revisions file. Should be private later.
-     * @param reciperev Recipe revision number.
-     * @param hash Target package binary hash.
-     * @return Binary revisions index file in the storage, as Key.
-     */
-    public Key getBinaryRevkey(final int reciperev, final String hash) {
-        return new Key.From(
-            this.pkgkey, Integer.toString(reciperev), RevisionsIndexApi.BIN_SUBDIR,
-            hash, RevisionsIndexApi.INDEX_FILE
-        );
-    }
-
-    /**
-     * Updates binary index file. Fully recursive.
-     * Does updateRecipeIndex(), then for each revision & for each pkg binary updateBinaryIndex().
-     * @return CompletionStage to handle operation completion.
-     */
-    public CompletionStage<Void> fullIndexUpdate() {
-        return this.doWithLock(
-            new Key.From(this.pkgkey), () -> this.fullindexer.fullIndexUpdate(this.pkgkey)
-        );
     }
 
     /**
@@ -238,18 +217,6 @@ public final class RevisionsIndexApi {
     }
 
     /**
-     * Returns binary packages list (of hashes) for given recipe revision.
-     * @param reciperev Revision number of the recipe.
-     * @return CompletionStage with the list of package binaries (hashes) as strings.
-     */
-    public CompletionStage<List<String>> getPackageList(final int reciperev) {
-        final Key key = new Key.From(
-            this.pkgkey, Integer.toString(reciperev), RevisionsIndexApi.BIN_SUBDIR
-        );
-        return new PackageList(this.storage).get(key);
-    }
-
-    /**
      * Add binary revision to the index.
      * @param reciperev Recipe revision number.
      * @param hash Package binary hash.
@@ -262,6 +229,39 @@ public final class RevisionsIndexApi {
         return this.doWithLock(
             new Key.From(key), () -> this.core.addToRevdata(revision, key)
         );
+    }
+
+    /**
+     * Returns binary packages list (of hashes) for given recipe revision.
+     * @param reciperev Revision number of the recipe.
+     * @return CompletionStage with the list of package binaries (hashes) as strings.
+     */
+    public CompletionStage<List<String>> getPackageList(final int reciperev) {
+        final Key key = new Key.From(
+            this.pkgkey, Integer.toString(reciperev), RevisionsIndexApi.BIN_SUBDIR
+        );
+        return new PackageList(this.storage).get(key);
+    }
+
+    /**
+     * Creates full storage key to the binary revisions file.
+     * @param reciperev Recipe revision number.
+     * @param hash Target package binary hash.
+     * @return Binary revisions index file in the storage, as Key.
+     */
+    private Key getBinaryRevkey(final int reciperev, final String hash) {
+        return new Key.From(
+            this.pkgkey, Integer.toString(reciperev), RevisionsIndexApi.BIN_SUBDIR,
+            hash, RevisionsIndexApi.INDEX_FILE
+        );
+    }
+
+    /**
+     * Creates full storage key to the recipe revisions file.
+     * @return Recipe revisions index file in the storage, as Key.
+     */
+    private Key getRecipeRevkey() {
+        return new Key.From(this.pkgkey, RevisionsIndexApi.INDEX_FILE);
     }
 
     /**
