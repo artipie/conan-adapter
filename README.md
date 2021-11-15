@@ -110,26 +110,26 @@ This is the dependency you need:
 </dependency>
 ```
 
-After that, you can use existing `com.artipie.asto.Storage` implementations to create required storage object. 
-There are filesystem storage, S3 storage, in-memory storage types.
-
-Then, you make an instance of `Rpm` class with your storage
-as an argument. Finally, you put your artifacts to the storage specifying repository key 
-(`rpm-repo` in our example) and instruct `Rpm` to update the meta info:
+After that, you can use existing [asto](https://github.com/artipie/asto) `com.artipie.asto.Storage` implementations to create required storage object. 
+There are filesystem storage, S3 storage, in-memory storage types. After that, you could use available API classes.
 
 # RevisionsIndexApi
 
 This class provides APIs for Conan revision index support for Conan V2 protocol.
 It provides methods to add and remove revision information from revisions.txt files, for example:
+```java
 CompletionStage<Void> addRecipeRevision(final int revision);
 CompletionStage<Boolean> removeRecipeRevision(final int revision);
 CompletionStage<List<Integer>> getRecipeRevisions();
 CompletionStage<List<Integer>> getBinaryRevisions(final int reciperev, final String hash);
+```
 
 It also provides methods for index files update after package contents changes:
+```java
 CompletionStage<List<Integer>> updateRecipeIndex();
 CompletionStage<List<Integer>> updateBinaryIndex(final int reciperev, final String hash);
 CompletionStage<Void> fullIndexUpdate()
+```
 
 Usage example:
 
@@ -140,7 +140,7 @@ final RevisionsIndexApi index = new RevisionsIndexApi(storage, new Key.From("zli
 index.fullIndexUpdate().toCompletableFuture().join();
 ```
 
-See also Artipie Conan adapter javadoc.
+See also Artipie Conan adapter [Javadoc](https://www.javadoc.io/doc/com.artipie/conan-adapter/latest/index.html) for more technical details.
 
 ## How to configure and start Artipie Conan endpoint
 
