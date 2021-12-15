@@ -24,12 +24,15 @@
 package com.artipie.conan;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Tests for IniFile class.
@@ -38,37 +41,60 @@ import org.junit.jupiter.api.Test;
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class IniFileTest {
 
-    /**
-     * Path to temporary file for tests.
-     */
-    private Path tmp;
-
-    @org.junit.jupiter.api.BeforeEach
-    void setUp() throws IOException {
-        this.tmp = Files.createTempFile("", "");
-    }
-
-    @org.junit.jupiter.api.AfterEach
-    void tearDown() throws IOException {
-        Files.deleteIfExists(this.tmp);
+    @Test
+    void testGetValueTypes() throws IOException, URISyntaxException {
+        final URL url = this.getClass().getResource("/conan-test/conaninfo.txt");
+        final IniFile ini = IniFile.loadIniFile(Paths.get(url.toURI()));
+        final int gccver = 9;
+        MatcherAssert.assertThat(
+            "Invalid compiler.version value",
+            ini.getValue("full_settings", "compiler.version", 0).equals(gccver)
+        );
+        MatcherAssert.assertThat(
+            "Invalid os field value",
+            ini.getValue("full_settings", "os", "").equals("Linux")
+        );
+        MatcherAssert.assertThat(
+            "Invalid fPIC field value",
+            ini.getValue("options", "fPIC", false).equals(true)
+        );
+        MatcherAssert.assertThat(
+            "Invalid \"shared\" field value",
+            ini.getValue("options", "shared", true).equals(false)
+        );
+        MatcherAssert.assertThat(
+            "Invalid field in recipe_hash hash value",
+            ini.getValue("recipe_hash", "cb005523f87beefc615e1ff49724883e", "").equals("")
+        );
+        MatcherAssert.assertThat(
+            "Invalid \"shared\" field value",
+            ini.getValue("options", "shared", true).equals(false)
+        );
     }
 
     @Test
-    void testEmptyIni() throws IOException {
-        final IniFile ini = new IniFile(this.tmp.toAbsolutePath().toString());
+    @SuppressWarnings("PMD.ProhibitFilesCreateFileInTests")
+    void testEmptyIni(@TempDir final Path tmp) throws IOException {
+        final Path tmpfile = tmp.resolve("test.ini");
+        Files.createFile(tmpfile);
+        final IniFile ini = IniFile.loadIniFile(tmpfile);
         MatcherAssert.assertThat(
             "No entries, but no exceptions thrown", ini.getEntries().isEmpty()
         );
     }
 
     @Test
-    void testEmptyIniReloading() throws IOException {
-        final IniFile ini = new IniFile(this.tmp.toAbsolutePath().toString());
+    @SuppressWarnings("PMD.ProhibitFilesCreateFileInTests")
+    void testEmptyIniReloading(@TempDir final Path tmp) throws IOException {
+        final Path tmpfile = tmp.resolve("test.ini");
+        Files.createFile(tmpfile);
+        final IniFile ini = IniFile.loadIniFile(tmpfile);
         MatcherAssert.assertThat(
             "No entries, but no exceptions thrown", ini.getEntries().isEmpty()
         );
-        ini.save(this.tmp.toAbsolutePath().toString());
-        final IniFile tmpini = new IniFile(this.tmp.toAbsolutePath().toString());
+        final Path tmpsave = tmp.resolve("test.ini");
+        ini.save(tmpsave.toAbsolutePath().toString());
+        final IniFile tmpini = IniFile.loadIniFile(tmpsave);
         MatcherAssert.assertThat(
             "Saved copy must be identical", ini.equals(tmpini)
         );
@@ -77,7 +103,7 @@ class IniFileTest {
     @Test
     void testIniFileLoading() throws IOException {
         final URL url = this.getClass().getResource("/conan-test/conaninfo.txt");
-        final IniFile ini = new IniFile(url.getPath());
+        final IniFile ini = IniFile.loadIniFile(Paths.get(url.getPath()));
         final int conanentries = 8;
         MatcherAssert.assertThat(
             "8 sections expected.", ini.getEntries().size() == conanentries
@@ -96,11 +122,12 @@ class IniFileTest {
     }
 
     @Test
-    void testIniReloading() throws IOException {
+    void testIniReloading(@TempDir final Path tmp) throws IOException {
         final URL url = this.getClass().getResource("/conan-test/conaninfo.txt");
-        final IniFile ini = new IniFile(url.getPath());
-        ini.save(this.tmp.toAbsolutePath().toString());
-        final IniFile tmpini = new IniFile(this.tmp.toAbsolutePath().toString());
+        final IniFile ini = IniFile.loadIniFile(Paths.get(url.getPath()));
+        final Path tmpfile = tmp.resolve("test.ini");
+        ini.save(tmpfile.toAbsolutePath().toString());
+        final IniFile tmpini = IniFile.loadIniFile(tmpfile);
         MatcherAssert.assertThat(
             "Saved copy must be identical", ini.equals(tmpini)
         );
@@ -109,7 +136,7 @@ class IniFileTest {
     @Test
     void testKeysWithoutValues() throws IOException {
         final URL url = this.getClass().getResource("/conan-test/conanfile.txt");
-        final IniFile ini = new IniFile(url.getPath());
+        final IniFile ini = IniFile.loadIniFile(Paths.get(url.getPath()));
         MatcherAssert.assertThat(
             "Two sections expected.", ini.getEntries().size() == 2
         );
@@ -145,11 +172,12 @@ class IniFileTest {
     }
 
     @Test
-    void testKeysWithoutValuesReloading() throws IOException {
+    void testKeysWithoutValuesReloading(@TempDir final Path tmp) throws IOException {
         final URL url = this.getClass().getResource("/conan-test/conanfile.txt");
-        final IniFile ini = new IniFile(url.getPath());
-        ini.save(this.tmp.toAbsolutePath().toString());
-        final IniFile tmpini = new IniFile(this.tmp.toAbsolutePath().toString());
+        final IniFile ini = IniFile.loadIniFile(Paths.get(url.getPath()));
+        final Path tmpfile = tmp.resolve("test.ini");
+        ini.save(tmpfile.toAbsolutePath().toString());
+        final IniFile tmpini = IniFile.loadIniFile(tmpfile);
         MatcherAssert.assertThat(
             "Saved copy must be identical", ini.equals(tmpini)
         );

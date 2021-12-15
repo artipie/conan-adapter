@@ -28,12 +28,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -59,20 +62,10 @@ public final class IniFile {
     private final Map<String, Map<String, String>> entries;
 
     /**
-     * Initializes object instance with contents of the .ini file at the given path.
-     * @param path Path to the .ini file.
-     * @throws IOException In case some I/O error occurs.
-     */
-    public IniFile(final String path) throws IOException {
-        this(IniFile.loadEntries(new String(Files.readAllBytes(Paths.get(path)))));
-    }
-
-    /**
      * Initializes object instance with contents of the .ini file in the data array.
      * @param data Data of the .ini file.
-     * @throws IOException In case some I/O related error occurs.
      */
-    public IniFile(final byte[] data) throws IOException {
+    public IniFile(final byte[] data) {
         this(IniFile.loadEntries(new String(data)));
     }
 
@@ -82,6 +75,17 @@ public final class IniFile {
      */
     public IniFile(final Map<String, Map<String, String>> entries) {
         this.entries = entries;
+    }
+
+    /**
+     * Loads IniFile from contents of the .ini file at the given path.
+     * @param path Path to the .ini file.
+     * @return IniFile object with contents of the file.
+     * @throws IOException In case some I/O error occurs.
+     */
+    @SuppressWarnings("PMD.ProhibitPublicStaticMethods")
+    public static IniFile loadIniFile(final Path path) throws IOException {
+        return new IniFile(IniFile.loadEntries(new String(Files.readAllBytes(path))));
     }
 
     /**
@@ -161,30 +165,51 @@ public final class IniFile {
     }
 
     /**
-     * Returns ini file value as T, using new T(String) ctor.
+     * Returns .ini file value as T, using internally new T(String) ctor. This is a convenience
+     * method, to facilitate the readability of the end-user code.
      * @param section Ini file section name.
      * @param key Ini file key name.
      * @param defaultvalue Ini file default return value, if no value found.
      * @param <T> Get this type.
-     * @return Corresponding value from Ini file, of default value, if not found.
+     * @return Corresponding value from Ini file as type T, of default value, if not found.
      */
     @SuppressWarnings("unchecked")
     public <T> T getValue(final String section, final String key, final T defaultvalue) {
+        return this.getValue(
+            section, key, defaultvalue, str -> {
+                T result;
+                try {
+                    result = (T) defaultvalue.getClass().getDeclaredConstructor(String.class)
+                        .newInstance(str);
+                } catch (final ReflectiveOperationException | ClassCastException ex) {
+                    result = defaultvalue;
+                }
+                return result;
+            });
+    }
+
+    /**
+     * Returns .ini file value as T, using provided factory for T objects.
+     * @param section Ini file section name.
+     * @param key Ini file key name.
+     * @param defaultvalue Ini file default return value, if no value found.
+     * @param factory Factory that would provide new instances of T, initialized with String value.
+     * @param <T> Get this type.
+     * @return Corresponding value from Ini file as type T, of default value, if not found.
+     * @checkstyle ParameterNumberCheck (30 lines)
+     */
+    public <T> T getValue(final String section, final String key, final T defaultvalue,
+        final Function<String, T> factory) {
         final Map<String, String> values = this.entries.get(section);
-        T result;
+        final T result;
         if (values == null) {
             result = defaultvalue;
         } else {
-            try {
-                final String value = values.get(key);
-                if (value == null) {
-                    result = defaultvalue;
-                } else {
-                    result = (T) defaultvalue.getClass().getDeclaredConstructor(String.class)
-                        .newInstance(value);
-                }
-            } catch (final ReflectiveOperationException | ClassCastException ex) {
+            final String value = values.get(key);
+            if (value == null) {
                 result = defaultvalue;
+            } else {
+                result = factory.apply(value);
             }
         }
         return result;
@@ -197,8 +222,7 @@ public final class IniFile {
      * @throws IOException In case some I/O error occurs.
      */
     @SuppressWarnings("PMD.AssignmentInOperand")
-    private static Map<String, Map<String, String>> loadEntries(final String data)
-        throws IOException {
+    private static Map<String, Map<String, String>> loadEntries(final String data) {
         try (BufferedReader reader = new BufferedReader(new StringReader(data))) {
             final Map<String, Map<String, String>> entries = new HashMap<>();
             String line;
@@ -214,6 +238,8 @@ public final class IniFile {
                 }
             }
             return entries;
+        } catch (final IOException ex) {
+            throw new UncheckedIOException(ex);
         }
     }
 
