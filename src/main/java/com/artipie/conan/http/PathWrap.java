@@ -211,4 +211,32 @@ public abstract class PathWrap {
             super("^/v2/conans/(?<path>.*)/revisions/(?<rev>[0-9]*)/packages/(?<hash>[0-9,a-f]*)/revisions/(?<rev2>[0-9]*)/files/(?<file>.*)$");
         }
     }
+
+    /**
+     * Request for user auth.
+     * @since 0.1
+     */
+    public static class UserAuth extends PathWrap {
+
+        /**
+         * Ctor.
+         */
+        protected UserAuth() {
+            super("^/v1/users/authenticate$");
+        }
+    }
+
+    /**
+     * Request user credentials check.
+     * @since 0.1
+     */
+    public static class CredsCheck extends PathWrap {
+
+        /**
+         * Ctor.
+         */
+        protected CredsCheck() {
+            super("^/v1/users/check_credentials$");
+        }
+    }
 }
