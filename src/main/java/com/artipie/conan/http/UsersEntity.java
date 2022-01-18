@@ -99,7 +99,7 @@ public final class UsersEntity {
             final Iterable<Map.Entry<String, String>> headers, final Publisher<ByteBuffer> body) {
             return new AsyncResponse(
                 CompletableFuture.supplyAsync(new RequestLineFrom(line)::uri).thenCompose(
-                    uri -> CompletableFuture.completedFuture("{}").thenCompose(
+                    uri -> UserAuth.userAuth().thenApply(
                         content -> {
                             final Response result;
                             if (Strings.isNullOrEmpty(content)) {
@@ -116,11 +116,19 @@ public final class UsersEntity {
                                     UsersEntity.CONTENT_TYPE, UsersEntity.JSON_TYPE
                                 );
                             }
-                            return CompletableFuture.completedFuture(result);
+                            return result;
                         }
                     )
                 )
             );
+        }
+
+        /**
+         * Does user auth logic for Conan HTTP request.
+         * @return Json string response.
+         */
+        private static CompletableFuture<String> userAuth() {
+            return CompletableFuture.completedFuture("{}");
         }
     }
 
@@ -148,7 +156,7 @@ public final class UsersEntity {
             final Iterable<Map.Entry<String, String>> headers, final Publisher<ByteBuffer> body) {
             return new AsyncResponse(
                 CompletableFuture.supplyAsync(new RequestLineFrom(line)::uri).thenCompose(
-                    uri -> CredsCheck.credsCheck().thenCompose(
+                    uri -> CredsCheck.credsCheck().thenApply(
                         content -> {
                             final Response result;
                             if (Strings.isNullOrEmpty(content)) {
@@ -165,7 +173,7 @@ public final class UsersEntity {
                                     UsersEntity.CONTENT_TYPE, UsersEntity.JSON_TYPE
                                 );
                             }
-                            return CompletableFuture.completedFuture(result);
+                            return result;
                         }
                     )
                 )
@@ -173,7 +181,7 @@ public final class UsersEntity {
         }
 
         /**
-         * Checks user credentials - Conan HTTP request.
+         * Checks user credentials for Conan HTTP request.
          * @return Json string response.
          */
         private static CompletableFuture<String> credsCheck() {
