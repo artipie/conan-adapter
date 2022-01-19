@@ -23,8 +23,10 @@
  */
 package com.artipie.conan.http;
 
+import com.artipie.asto.Content;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
+import com.artipie.asto.ext.PublisherAs;
 import com.artipie.conan.Completables;
 import com.artipie.http.Response;
 import com.artipie.http.Slice;
@@ -35,8 +37,11 @@ import com.artipie.http.rs.RsWithBody;
 import com.artipie.http.rs.RsWithHeaders;
 import com.artipie.http.rs.StandardRs;
 import io.vavr.Tuple2;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -135,10 +140,48 @@ abstract class BaseConanSlice implements Slice {
     }
 
     /**
+     * Generates An md5 hash for package file.
+     * @param key Storage key for package file.
+     * @return An md5 hash string for file content.
+     */
+    protected CompletableFuture<String> generateMDhash(final Key key) {
+        return this.storage.exists(key).thenCompose(
+            exist -> {
+                final CompletableFuture<String> result;
+                if (exist) {
+                    result = this.storage.value(key).thenApply(BaseConanSlice::getMdHashString);
+                } else {
+                    result = CompletableFuture.completedFuture("");
+                }
+                return result;
+            }
+        );
+    }
+
+    /**
+     * Returns MD5 hash string for content data.
+     * @param content Valid content instance with data.
+     * @return MD5 hash string value.
+     */
+    protected static String getMdHashString(final Content content) {
+        String hashstr;
+        try {
+            final byte[] data = new PublisherAs(content)
+                .bytes().toCompletableFuture().join();
+            final MessageDigest mdg = MessageDigest.getInstance("MD5");
+            final int hex = 16;
+            hashstr = new BigInteger(1, mdg.digest(data)).toString(hex);
+        } catch (final NoSuchAlgorithmException exception) {
+            hashstr = "";
+        }
+        return hashstr;
+    }
+
+    /**
      * Processess the request and returns result data for this request.
      * @param request Artipie request line helper object instance.
      * @param hostname Current server host name string to construct and process URLs.
-     * @param matcher Matched paattern matcher object for the current path wrapper.
+     * @param matcher Matched pattern matcher object for the current path wrapper.
      * @return Future object, providing request result data.
      */
     protected abstract CompletableFuture<RequestResult> getResult(

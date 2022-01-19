@@ -239,4 +239,30 @@ public abstract class PathWrap {
             super("^/v1/users/check_credentials$");
         }
     }
+
+    /**
+     * Request to check package presense and retrieving manifest.
+     * @since 0.1
+     */
+    public static class DigestForPkg extends PathWrap {
+        /**
+         * Ctor.
+         */
+        protected DigestForPkg() {
+            super("^/v1/conans/(?<path>.*)/digest");
+        }
+    }
+
+    /**
+     * Request for package sources info by hash.
+     * @since 0.1
+     */
+    public static class PkgSrcInfo extends PathWrap {
+        /**
+         * Ctor.
+         */
+        protected PkgSrcInfo() {
+            super("^/v1/conans/(?<path>.*)$");
+        }
+    }
 }
