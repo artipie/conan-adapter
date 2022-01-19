@@ -23,10 +23,10 @@
  */
 package com.artipie.conan.http;
 
-import com.artipie.asto.Content;
+import com.artipie.asto.ArtipieIOException;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
-import com.artipie.asto.ext.PublisherAs;
+import com.artipie.asto.ext.ContentDigest;
 import com.artipie.conan.Completables;
 import com.artipie.http.Response;
 import com.artipie.http.Slice;
@@ -37,7 +37,6 @@ import com.artipie.http.rs.RsWithBody;
 import com.artipie.http.rs.RsWithHeaders;
 import com.artipie.http.rs.StandardRs;
 import io.vavr.Tuple2;
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -149,32 +148,23 @@ abstract class BaseConanSlice implements Slice {
             exist -> {
                 final CompletableFuture<String> result;
                 if (exist) {
-                    result = this.storage.value(key).thenApply(BaseConanSlice::getMdHashString);
+                    result = this.storage.value(key).thenCompose(
+                        content -> {
+                            final ContentDigest dgt = new ContentDigest(
+                                content, () -> {
+                                try {
+                                    return MessageDigest.getInstance("MD5");
+                                } catch (final NoSuchAlgorithmException ex) {
+                                    throw new ArtipieIOException(ex);
+                                }
+                            });
+                            return dgt.hex();
+                        });
                 } else {
                     result = CompletableFuture.completedFuture("");
                 }
                 return result;
-            }
-        );
-    }
-
-    /**
-     * Returns MD5 hash string for content data.
-     * @param content Valid content instance with data.
-     * @return MD5 hash string value.
-     */
-    protected static String getMdHashString(final Content content) {
-        String hashstr;
-        try {
-            final byte[] data = new PublisherAs(content)
-                .bytes().toCompletableFuture().join();
-            final MessageDigest mdg = MessageDigest.getInstance("MD5");
-            final int hex = 16;
-            hashstr = new BigInteger(1, mdg.digest(data)).toString(hex);
-        } catch (final NoSuchAlgorithmException exception) {
-            hashstr = "";
-        }
-        return hashstr;
+            });
     }
 
     /**
