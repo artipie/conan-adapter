@@ -23,10 +23,10 @@
  */
 package com.artipie.conan.http;
 
-import com.artipie.asto.ArtipieIOException;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.ext.ContentDigest;
+import com.artipie.asto.ext.Digests;
 import com.artipie.conan.Completables;
 import com.artipie.http.Response;
 import com.artipie.http.Slice;
@@ -39,8 +39,6 @@ import com.artipie.http.rs.StandardRs;
 import io.vavr.Tuple2;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -150,14 +148,7 @@ abstract class BaseConanSlice implements Slice {
                 if (exist) {
                     result = this.storage.value(key).thenCompose(
                         content -> {
-                            final ContentDigest dgt = new ContentDigest(
-                                content, () -> {
-                                try {
-                                    return MessageDigest.getInstance("MD5");
-                                } catch (final NoSuchAlgorithmException ex) {
-                                    throw new ArtipieIOException(ex);
-                                }
-                            });
+                            final ContentDigest dgt = new ContentDigest(content, Digests.MD5);
                             return dgt.hex();
                         });
                 } else {
