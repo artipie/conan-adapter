@@ -147,10 +147,8 @@ abstract class BaseConanSlice implements Slice {
                 final CompletableFuture<String> result;
                 if (exist) {
                     result = this.storage.value(key).thenCompose(
-                        content -> {
-                            final ContentDigest dgt = new ContentDigest(content, Digests.MD5);
-                            return dgt.hex();
-                        });
+                        content -> new ContentDigest(content, Digests.MD5).hex()
+                    );
                 } else {
                     result = CompletableFuture.completedFuture("");
                 }
