@@ -9,9 +9,17 @@ ls ~/.conan/data|http_proxy= https_proxy= xargs -n1 conan upload -r conan-local 
 
 At the moment, following commands were successfully tested with conan v1.37.2 and conan-artipie adapter (with empty cache).
 
+conan remote add conan-local http://localhost:9300 false
 conan get zlib/1.2.11 -r conan-local
 CONAN_LOGGING_LEVEL=debug conan download -r conan-local zlib/1.2.11@
 
 mkdir build && cd build
 rm -rf ./* && rm -rf ~/.conan/data && conan install -r conan-local ..
+
+Testing package uploading, with logging:
+
+export CONAN_TRACE_FILE=/tmp/conan_trace.log
+cd conan-center-index/recipes/zmqpp/all
+conan create . 4.2.0@
+conan upload zmqpp/4.2.0@ -r conan-local --all
 
