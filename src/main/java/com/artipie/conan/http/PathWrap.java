@@ -265,4 +265,18 @@ public abstract class PathWrap {
             super("^/v1/conans/(?<path>.*)$");
         }
     }
+
+    /**
+     * Request path for /upload_urls request.
+     * @since 0.1
+     */
+    public static final class UploadSrc extends PathWrap {
+
+        /**
+         * Ctor.
+         */
+        protected UploadSrc() {
+            super("^/v1/conans/(?<path>.*)/upload_urls$");
+        }
+    }
 }

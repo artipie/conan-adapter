@@ -41,6 +41,7 @@ import com.artipie.http.rt.RtRulePath;
 import com.artipie.http.rt.SliceRoute;
 import com.artipie.http.slice.SliceDownload;
 import com.artipie.http.slice.SliceSimple;
+import com.artipie.http.slice.SliceUpload;
 
 /**
  * Artipie {@link Slice} for Conan repository HTTP API.
@@ -83,6 +84,36 @@ public final class ConanSlice extends Slice.Wrap {
                                 "complex_search,revisions,revisions"
                             )
                         )
+                    )
+                ),
+                new RtRulePath(
+                    new RtRule.All(
+                        new RtRule.ByPath(new PathWrap.CredsCheck().getPath()),
+                        ByMethodsRule.Standard.GET
+                    ),
+                    new BasicAuthSlice(
+                        new UsersEntity.CredsCheck(storage),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.READ)
+                    )
+                ),
+                new RtRulePath(
+                    new RtRule.ByPath(new PathWrap.UserAuth().getPath()),
+                    new BasicAuthSlice(
+                        new UsersEntity.UserAuth(storage),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.READ)
+                    )
+                ),
+                new RtRulePath(
+                    new RtRule.All(
+                        new RtRule.ByPath(new PathWrap.DigestForPkg().getPath()),
+                        ByMethodsRule.Standard.GET
+                    ),
+                    new BasicAuthSlice(
+                        new ConansEntity.DigestForPkg(storage),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.READ)
                     )
                 ),
                 new RtRulePath(
@@ -212,11 +243,22 @@ public final class ConanSlice extends Slice.Wrap {
                     )
                 ),
                 new RtRulePath(
-                    new ByMethodsRule(RqMethod.PUT),
+                    new RtRule.All(
+                        new RtRule.ByPath(ConanUpload.UPLOAD_SRC_PATH.getPath()),
+                        ByMethodsRule.Standard.POST
+                    ),
                     new BasicAuthSlice(
-                        new ConanUpload(storage),
+                        new ConanUpload.UploadUrls(storage),
                         auth,
                         new Permission.ByName(perms, Action.Standard.WRITE)
+                    )
+                ),
+                new RtRulePath(
+                    new ByMethodsRule(RqMethod.PUT),
+                    new BasicAuthSlice(
+                        new SliceUpload(storage),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.READ)
                     )
                 )
             )
