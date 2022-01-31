@@ -23,6 +23,7 @@
  */
 package com.artipie.conan.http;
 
+import com.artipie.ArtipieException;
 import com.artipie.asto.Key;
 import com.artipie.asto.Storage;
 import com.artipie.asto.ext.PublisherAs;
@@ -41,6 +42,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import javax.json.Json;
+import javax.json.JsonObjectBuilder;
 import javax.json.stream.JsonParser;
 import org.reactivestreams.Publisher;
 import software.amazon.awssdk.utils.StringInputStream;
@@ -117,7 +119,11 @@ public final class ConanUpload {
         final Matcher matcher = pathwrap.getPattern().matcher(
             new RequestLineFrom(line).uri().getPath()
         );
-        matcher.matches();
+        if (!matcher.matches()) {
+            throw new ArtipieException(
+                String.join("Request parameters doesn't match: ", line)
+            );
+        }
         return matcher;
     }
 
@@ -190,19 +196,17 @@ public final class ConanUpload {
                 str -> {
                     final JsonParser parser = Json.createParser(new StringInputStream(str));
                     parser.next();
-                    final StringBuilder result = new StringBuilder("{");
+                    final JsonObjectBuilder result = Json.createObjectBuilder();
                     for (final String key : parser.getObject().keySet()) {
                         final String url = String.join(
                             "", ConanUpload.PROTOCOL, hostname, "/",
                             filename, ConanUpload.PKG_SRC_DIR, key, "?signature=0"
                         );
-                        result.append(String.join("", "\"", key, "\":\"", url, "\","));
+                        result.add(key, url);
                     }
-                    result.delete(result.length() - 1, result.length());
-                    result.append('}');
                     return (Response) new RsWithHeaders(
                         new RsWithBody(
-                            StandardRs.OK, result.toString(), StandardCharsets.UTF_8
+                            StandardRs.OK, result.build().toString(), StandardCharsets.UTF_8
                         ),
                         ConanUpload.CONTENT_TYPE, ConanUpload.JSON_TYPE
                     );
