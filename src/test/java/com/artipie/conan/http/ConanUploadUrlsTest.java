@@ -28,7 +28,9 @@ import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.http.Response;
 import com.artipie.http.hm.IsJson;
 import com.artipie.http.hm.RsHasBody;
+import com.artipie.http.hm.RsHasStatus;
 import com.artipie.http.rq.RequestLine;
+import com.artipie.http.rs.RsStatus;
 import io.reactivex.Flowable;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -54,9 +56,12 @@ public class ConanUploadUrlsTest {
         final String payload =
             "{\"conan_export.tgz\": \"\", \"conanfile.py\":\"\", \"conanmanifest.txt\": \"\"}";
         final byte[] data = payload.getBytes(StandardCharsets.UTF_8);
-        final String path = "/v1/conans/zmqpp/4.2.0/_/_/upload_urls";
         final Response response = new ConanUpload.UploadUrls(storage).response(
-            new RequestLine("POST", path, "HTTP/1.1").toString(),
+            new RequestLine(
+                "POST",
+                "/v1/conans/zmqpp/4.2.0/_/_/upload_urls",
+                "HTTP/1.1"
+            ).toString(),
             Arrays.asList(
                 new MapEntry<>("Content-Size", Long.toString(data.length)),
                 new MapEntry<>("Host", "localhost")
@@ -66,25 +71,33 @@ public class ConanUploadUrlsTest {
         MatcherAssert.assertThat(
             "Response body must match",
             response,
-            new RsHasBody(
-                new IsJson(
-                    Matchers.allOf(
-                        new JsonHas(
-                            "conan_export.tgz",
-                            new JsonValueIs(
-                                "http://localhost/zmqpp/4.2.0/_/_/0/export/conan_export.tgz?signature=0"
-                            )),
-                        new JsonHas(
-                            "conanfile.py",
-                            new JsonValueIs(
-                                "http://localhost/zmqpp/4.2.0/_/_/0/export/conanfile.py?signature=0"
-                            )),
-                        new JsonHas(
-                            "conanmanifest.txt",
-                            new JsonValueIs(
-                                "http://localhost/zmqpp/4.2.0/_/_/0/export/conanmanifest.txt?signature=0"
-                            ))
-                    )))
+            Matchers.allOf(
+                new RsHasStatus(RsStatus.OK),
+                new RsHasBody(
+                    new IsJson(
+                        Matchers.allOf(
+                            new JsonHas(
+                                "conan_export.tgz",
+                                new JsonValueIs(
+                                    "http://localhost/zmqpp/4.2.0/_/_/0/export/conan_export.tgz?signature=0"
+                                )
+                            ),
+                            new JsonHas(
+                                "conanfile.py",
+                                new JsonValueIs(
+                                    "http://localhost/zmqpp/4.2.0/_/_/0/export/conanfile.py?signature=0"
+                                )
+                            ),
+                            new JsonHas(
+                                "conanmanifest.txt",
+                                new JsonValueIs(
+                                    "http://localhost/zmqpp/4.2.0/_/_/0/export/conanmanifest.txt?signature=0"
+                                )
+                            )
+                        )
+                    )
+                )
+            )
         );
     }
 }
