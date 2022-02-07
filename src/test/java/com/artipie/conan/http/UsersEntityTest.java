@@ -23,18 +23,16 @@
  */
 package com.artipie.conan.http;
 
-import com.artipie.asto.Storage;
+import com.artipie.asto.Content;
 import com.artipie.asto.memory.InMemoryStorage;
-import com.artipie.http.Response;
+import com.artipie.http.Headers;
 import com.artipie.http.hm.IsJson;
 import com.artipie.http.hm.RsHasBody;
 import com.artipie.http.hm.RsHasStatus;
 import com.artipie.http.rq.RequestLine;
+import com.artipie.http.rq.RqMethod;
 import com.artipie.http.rs.RsStatus;
-import java.util.Arrays;
-import java.util.Collections;
 import javax.json.Json;
-import org.cactoos.map.MapEntry;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.hamcrest.core.IsEqual;
@@ -50,17 +48,12 @@ public class UsersEntityTest {
 
     @Test
     public void userAuthTest() {
-        final Storage storage = new InMemoryStorage();
-        final String path = "/v1/users/authenticate";
-        final Response response = new UsersEntity.UserAuth(storage).response(
-            new RequestLine("GET", path, "HTTP/1.1").toString(),
-            Arrays.asList(
-                new MapEntry<>("Host", "localhost")
-            ), null
-        );
         MatcherAssert.assertThat(
             "Response must match",
-            response, Matchers.allOf(
+            new UsersEntity.UserAuth(new InMemoryStorage()).response(
+                new RequestLine(RqMethod.GET, "/v1/users/authenticate").toString(),
+                new Headers.From("Host", "localhost"), Content.EMPTY
+            ), Matchers.allOf(
                 new RsHasBody(
                     new IsJson(new IsEqual<>(Json.createObjectBuilder().build()))
                 ),
@@ -71,17 +64,12 @@ public class UsersEntityTest {
 
     @Test
     public void credsCheckTest() {
-        final Storage storage = new InMemoryStorage();
-        final String path = "/v1/users/check_credentials";
-        final Response response = new UsersEntity.CredsCheck(storage).response(
-            new RequestLine("GET", path, "HTTP/1.1").toString(),
-            Collections.singletonList(
-                new MapEntry<>("Host", "localhost")
-            ), null
-        );
         MatcherAssert.assertThat(
             "Response must match",
-            response, Matchers.allOf(
+            new UsersEntity.CredsCheck(new InMemoryStorage()).response(
+                new RequestLine(RqMethod.GET, "/v1/users/check_credentials").toString(),
+                new Headers.From("Host", "localhost"), Content.EMPTY
+            ), Matchers.allOf(
                 new RsHasBody(
                     new IsJson(new IsEqual<>(Json.createObjectBuilder().build()))
                 ),
