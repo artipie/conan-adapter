@@ -148,7 +148,7 @@ class ConansEntityTest {
             new Headers.From("Host", "localhost:9300"), Content.EMPTY
         );
         final String expected = Json.createReader(
-            Thread.currentThread().getContextClassLoader().getResourceAsStream(json)
+            new TestResource(json).asInputStream()
         ).readObject().toString();
         final AtomicReference<byte[]> out = new AtomicReference<>();
         response.send(new FakeConnection(out)).toCompletableFuture().join();
