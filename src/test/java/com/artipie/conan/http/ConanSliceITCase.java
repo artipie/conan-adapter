@@ -264,6 +264,26 @@ class ConanSliceITCase {
         );
     }
 
+    @Test
+    void testPackageUpload() throws IOException, InterruptedException {
+        for (final String file : ConanSliceITCase.CONAN_TEST_PKG) {
+            new TestResource(String.join("/", ConanSliceITCase.SRV_PREFIX, file))
+                .saveTo(this.storage, new Key.From(file));
+        }
+        final Container.ExecResult install = this.cntn.execInContainer(
+            "conan", "install", "zlib/1.2.11@", "-r", "conan-test"
+        );
+        final Container.ExecResult upload = this.cntn.execInContainer(
+            "conan", "upload", "zlib/1.2.11@", "-r", "conan-test", "--all"
+        );
+        MatcherAssert.assertThat(
+            "conan install must succeed", install.getExitCode() == 0
+        );
+        MatcherAssert.assertThat(
+            "conan upload must succeed", upload.getExitCode() == 0
+        );
+    }
+
     /**
      * Starts VertxSliceServer and docker container.
      * @throws Exception On error
@@ -300,10 +320,11 @@ class ConanSliceITCase {
             builder -> builder
                 .from("ubuntu:20.04")
                 .env("CONAN_TRACE_FILE", "/tmp/conan_trace.log")
+                .env("DEBIAN_FRONTEND", "noninteractive")
                 .env("no_proxy", "host.docker.internal,host.testcontainers.internal,localhost,127.0.0.1")
                 .workDir("/home")
                 .run("apt update -y -o APT::Update::Error-Mode=any")
-                .run("apt install --no-install-recommends -y python3-pip curl g++")
+                .run("apt install --no-install-recommends -y python3-pip curl g++ git make cmake")
                 .run("pip3 install -U pip setuptools")
                 .run("pip3 install -U conan==1.37.2 markupsafe==2.0.1")
                 .run("conan profile new --detect default")
@@ -313,6 +334,7 @@ class ConanSliceITCase {
                 .run("conan remote add conan-test http://host.testcontainers.internal:9300 False")
                 .run("conan remote remove conancenter")
                 .run("conan remote remove conan-center")
+                .run("conan config install https://github.com/conan-io/conanclientcert.git")
                 .build()
         );
     }
