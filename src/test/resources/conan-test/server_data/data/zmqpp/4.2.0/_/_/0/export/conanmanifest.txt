@@ -1,0 +1,6 @@
+1616100492
+conandata.yml: 432ae1697ad49ab23ac8f45dfc742ff6
+conanfile.py: 58d0c7b28c6e83c7ef2a9c70aaa2f67a
+export_source/CMakeLists.txt: b1f2468820d754fe596fcbf1d90634c3
+export_source/patches/0001-fix_zmqpp_export_header_and_windows.patch: 4906b07cc6ea8124404eb124ad288fb1
+export_source/patches/0002-missing-includes.patch: 19cc7ee9671f9ea3debce9fcf0bd885d

@@ -1,0 +1,7 @@
+1613589197
+conaninfo.txt: 894dd586c3802e54bd664c9a26f3caf9
+include/zmq.h: 8b3e8f59042ada6583c41e35c2cadfd7
+include/zmq_utils.h: 5561e56be35201dd26243e7ea761279a
+lib/libzmq.a: 2ed65a3135388eba2e5111b011dcc751
+licenses/COPYING: f7b40df666d41e6508d03e1c207d498f
+licenses/COPYING.LESSER: d5311495d952062e0e4fbba39cbf3de1

@@ -1,0 +1,23 @@
+[settings]
+
+
+[requires]
+
+
+[options]
+
+
+[full_settings]
+
+
+[full_requires]
+
+
+[full_options]
+
+
+[recipe_hash]
+    3ea95a57f6fa3879c082a7425bf48b57
+
+[env]
+

@@ -1,0 +1,119 @@
+[settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.version=9
+    os=Linux
+
+[requires]
+    openssl/1.Y.Z
+    zlib/1.Y.Z
+
+[options]
+    fPIC=True
+    shared=False
+    with_brotli=False
+    with_c_ares=False
+    with_largemaxwritesize=False
+    with_ldap=False
+    with_libidn=False
+    with_libmetalink=False
+    with_libpsl=False
+    with_librtmp=False
+    with_libssh2=False
+    with_nghttp2=False
+    with_ssl=openssl
+    with_zlib=True
+
+[full_settings]
+    arch=x86_64
+    build_type=Release
+    compiler=gcc
+    compiler.version=9
+    os=Linux
+
+[full_requires]
+    openssl/1.1.1k:6af9cc7cb931c5ad942174fd7838eb655717c709
+    zlib/1.2.11:6af9cc7cb931c5ad942174fd7838eb655717c709
+
+[full_options]
+    darwin_ssl=deprecated
+    fPIC=True
+    shared=False
+    with_brotli=False
+    with_c_ares=False
+    with_largemaxwritesize=False
+    with_ldap=False
+    with_libidn=False
+    with_libmetalink=False
+    with_libpsl=False
+    with_librtmp=False
+    with_libssh2=False
+    with_nghttp2=False
+    with_openssl=deprecated
+    with_ssl=openssl
+    with_winssl=deprecated
+    with_wolfssl=deprecated
+    with_zlib=True
+    openssl:386=False
+    openssl:fPIC=True
+    openssl:no_aria=False
+    openssl:no_asm=False
+    openssl:no_async=False
+    openssl:no_bf=False
+    openssl:no_blake2=False
+    openssl:no_camellia=False
+    openssl:no_cast=False
+    openssl:no_chacha=False
+    openssl:no_cms=False
+    openssl:no_comp=False
+    openssl:no_ct=False
+    openssl:no_deprecated=False
+    openssl:no_des=False
+    openssl:no_dgram=False
+    openssl:no_dh=False
+    openssl:no_dsa=False
+    openssl:no_dso=False
+    openssl:no_ec=False
+    openssl:no_ecdh=False
+    openssl:no_ecdsa=False
+    openssl:no_engine=False
+    openssl:no_filenames=False
+    openssl:no_gost=False
+    openssl:no_hmac=False
+    openssl:no_idea=False
+    openssl:no_md4=False
+    openssl:no_md5=False
+    openssl:no_mdc2=False
+    openssl:no_ocsp=False
+    openssl:no_pinshared=False
+    openssl:no_rc2=False
+    openssl:no_rfc3779=False
+    openssl:no_rmd160=False
+    openssl:no_rsa=False
+    openssl:no_seed=False
+    openssl:no_sha=False
+    openssl:no_sm2=False
+    openssl:no_sm3=False
+    openssl:no_sm4=False
+    openssl:no_sock=False
+    openssl:no_srp=False
+    openssl:no_srtp=False
+    openssl:no_sse2=False
+    openssl:no_ssl=False
+    openssl:no_ssl3=False
+    openssl:no_threads=False
+    openssl:no_tls1=False
+    openssl:no_ts=False
+    openssl:no_whirlpool=False
+    openssl:openssldir=None
+    openssl:shared=False
+    zlib:fPIC=True
+    zlib:minizip=deprecated
+    zlib:shared=False
+
+[recipe_hash]
+    7b32228ef103a35c5f7128a277d4551a
+
+[env]
+
