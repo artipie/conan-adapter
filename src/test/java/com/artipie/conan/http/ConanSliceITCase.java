@@ -31,7 +31,6 @@ import com.artipie.http.auth.Authentication;
 import com.artipie.http.auth.Permissions;
 import com.artipie.http.slice.LoggingSlice;
 import com.artipie.vertx.VertxSliceServer;
-import io.vertx.reactivex.core.Vertx;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -60,11 +59,6 @@ class ConanSliceITCase {
      * Path prefix for conan repository test data.
      */
     private static final String SRV_PREFIX = "conan-test/server_data/data";
-
-    /**
-     * Vertx instance.
-     */
-    private static final Vertx VERTX = Vertx.vertx();
 
     /**
      * Conan server port.
@@ -278,7 +272,6 @@ class ConanSliceITCase {
     private void start() throws Exception {
         this.storage = new InMemoryStorage();
         this.server = new VertxSliceServer(
-            ConanSliceITCase.VERTX,
             new LoggingSlice(
                 new ConanSlice(
                     this.storage, Permissions.FREE, Authentication.ANONYMOUS
