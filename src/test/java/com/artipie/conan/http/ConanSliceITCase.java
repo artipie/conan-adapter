@@ -112,7 +112,7 @@ class ConanSliceITCase {
 
     @BeforeEach
     void setUp() throws Exception {
-        this.start(Permissions.FREE, Authentication.ANONYMOUS);
+        this.start();
     }
 
     @AfterEach
@@ -272,17 +272,18 @@ class ConanSliceITCase {
 
     /**
      * Starts VertxSliceServer and docker container.
-     *
-     * @param perms Permissions
-     * @param auth Authentication
      * @throws Exception On error
      * @checkstyle ParameterNumberCheck (10 lines)
      */
-    private void start(final Permissions perms, final Authentication auth) throws Exception {
+    private void start() throws Exception {
         this.storage = new InMemoryStorage();
         this.server = new VertxSliceServer(
             ConanSliceITCase.VERTX,
-            new LoggingSlice(new ConanSlice(this.storage, perms, auth)),
+            new LoggingSlice(
+                new ConanSlice(
+                    this.storage, Permissions.FREE, Authentication.ANONYMOUS
+                )
+            ),
             ConanSliceITCase.CONAN_PORT
         );
         final int port = this.server.start();
