@@ -38,6 +38,7 @@ import java.nio.file.Paths;
 import java.util.stream.Stream;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -248,6 +249,8 @@ class ConanSliceITCase {
 
     @Test
     void conanInstallRecipe() throws IOException, InterruptedException {
+        final String arch = this.cntn.execInContainer("uname", "-m").getStdout();
+        Assumptions.assumeTrue(arch.startsWith("x86_64"));
         new TestResource(ConanSliceITCase.SRV_PREFIX).addFilesTo(this.storage, Key.ROOT);
         this.cntn.copyFileToContainer(
             Transferable.of(
