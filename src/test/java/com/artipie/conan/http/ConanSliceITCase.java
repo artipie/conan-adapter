@@ -35,15 +35,11 @@ import io.vertx.reactivex.core.Vertx;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.stream.Stream;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import org.testcontainers.Testcontainers;
 import org.testcontainers.containers.Container;
 import org.testcontainers.containers.GenericContainer;
@@ -52,7 +48,7 @@ import org.testcontainers.images.builder.Transferable;
 
 /**
  * Tests for {@link ConanSlice}.
- *
+ * Test container and data for package base of Ubuntu 20.04 LTS x86_64.
  * @checkstyle LineLengthCheck (999 lines)
  * @checkstyle ClassDataAbstractionCouplingCheck (999 lines)
  * @since 0.1
@@ -74,6 +70,21 @@ class ConanSliceITCase {
      * Conan server port.
      */
     private static final int CONAN_PORT = 9300;
+
+    /**
+     * Conan server zlib package files list for integration tests.
+     */
+    private static final String[] CONAN_TEST_PKG = {
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conaninfo.txt",
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conan_package.tgz",
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conanmanifest.txt",
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/revisions.txt",
+        "zlib/1.2.11/_/_/0/export/conan_export.tgz",
+        "zlib/1.2.11/_/_/0/export/conanfile.py",
+        "zlib/1.2.11/_/_/0/export/conanmanifest.txt",
+        "zlib/1.2.11/_/_/0/export/conan_sources.tgz",
+        "zlib/1.2.11/_/_/revisions.txt",
+    };
 
     /**
      * Base dockerfile for test containers.
@@ -172,10 +183,9 @@ class ConanSliceITCase {
         );
     }
 
-    @ParameterizedTest
-    @MethodSource("conanServerTestFiles")
-    void conanDownloadPkg(final String... files) throws IOException, InterruptedException {
-        for (final String file : files) {
+    @Test
+    void conanDownloadPkg() throws IOException, InterruptedException {
+        for (final String file : ConanSliceITCase.CONAN_TEST_PKG) {
             new TestResource(String.join("/", ConanSliceITCase.SRV_PREFIX, file))
                 .saveTo(this.storage, new Key.From(file));
         }
@@ -187,10 +197,9 @@ class ConanSliceITCase {
         );
     }
 
-    @ParameterizedTest
-    @MethodSource("conanServerTestFiles")
-    void conanDownloadWrongPkgName(final String... files) throws IOException, InterruptedException {
-        for (final String file : files) {
+    @Test
+    void conanDownloadWrongPkgName() throws IOException, InterruptedException {
+        for (final String file : ConanSliceITCase.CONAN_TEST_PKG) {
             new TestResource(String.join("/", ConanSliceITCase.SRV_PREFIX, file))
                 .saveTo(this.storage, new Key.From(file));
         }
@@ -202,10 +211,9 @@ class ConanSliceITCase {
         );
     }
 
-    @ParameterizedTest
-    @MethodSource("conanServerTestFiles")
-    void conanDownloadWrongPkgVersion(final String... files) throws IOException, InterruptedException {
-        for (final String file : files) {
+    @Test
+    void conanDownloadWrongPkgVersion() throws IOException, InterruptedException {
+        for (final String file : ConanSliceITCase.CONAN_TEST_PKG) {
             new TestResource(String.join("/", ConanSliceITCase.SRV_PREFIX, file))
                 .saveTo(this.storage, new Key.From(file));
         }
@@ -217,10 +225,9 @@ class ConanSliceITCase {
         );
     }
 
-    @ParameterizedTest
-    @MethodSource("conanServerTestFiles")
-    void conanSearchPkg(final String... files) throws IOException, InterruptedException {
-        for (final String file : files) {
+    @Test
+    void conanSearchPkg() throws IOException, InterruptedException {
+        for (final String file : ConanSliceITCase.CONAN_TEST_PKG) {
             new TestResource(String.join("/", ConanSliceITCase.SRV_PREFIX, file))
                 .saveTo(this.storage, new Key.From(file));
         }
@@ -232,10 +239,9 @@ class ConanSliceITCase {
         );
     }
 
-    @ParameterizedTest
-    @MethodSource("conanServerTestFiles")
-    void conanSearchWrongPkgVersion(final String... files) throws IOException, InterruptedException {
-        for (final String file : files) {
+    @Test
+    void conanSearchWrongPkgVersion() throws IOException, InterruptedException {
+        for (final String file : ConanSliceITCase.CONAN_TEST_PKG) {
             new TestResource(String.join("/", ConanSliceITCase.SRV_PREFIX, file))
                 .saveTo(this.storage, new Key.From(file));
         }
@@ -315,26 +321,5 @@ class ConanSliceITCase {
                 .run("conan remote remove conan-center")
                 .build()
         );
-    }
-
-    /**
-     * Returns test package files list for integration tests.
-     *
-     * @return List of files, as Stream of junit Arguments.
-     */
-    @SuppressWarnings({"PMD.UnusedPrivateMethod", "PMD.LineLengthCheck"})
-    private static Stream<Arguments> conanServerTestFiles() {
-        final String[] files = {
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conaninfo.txt",
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conan_package.tgz",
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conanmanifest.txt",
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/revisions.txt",
-            "zlib/1.2.11/_/_/0/export/conan_export.tgz",
-            "zlib/1.2.11/_/_/0/export/conanfile.py",
-            "zlib/1.2.11/_/_/0/export/conanmanifest.txt",
-            "zlib/1.2.11/_/_/0/export/conan_sources.tgz",
-            "zlib/1.2.11/_/_/revisions.txt",
-        };
-        return Stream.of(Arguments.of((Object) files));
     }
 }
