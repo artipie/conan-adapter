@@ -1,3 +1,12 @@
+<img src="https://www.artipie.com/logo.svg" width="64px" height="64px"/>
+
+[![EO principles respected here](https://www.elegantobjects.org/badge.svg)](https://www.elegantobjects.org)
+[![We recommend IntelliJ IDEA](https://www.elegantobjects.org/intellij-idea.svg)](https://www.jetbrains.com/idea/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/com.artipie/conan-adapter/blob/master/LICENSE.txt)
+[![codecov](https://codecov.io/gh/artipie/maven-adapter/branch/master/graph/badge.svg)](https://codecov.io/gh/artipie/maven-adapter)
+[![Hits-of-Code](https://hitsofcode.com/github/artipie/conan-adapter)](https://hitsofcode.com/view/github/artipie/conan-adapter)
+[![Join our Telegramm group](https://img.shields.io/badge/Join%20us-Telegram-blue?&logo=telegram&?link=http://right&link=http://t.me/artipie)](http://t.me/artipie)
+
 # Conan Artipie adapter
 
 Conan is a C/C++ repository, this adapter is an SDK for working with Conan data and metadata and a HTTP endpoint for the Conan repository.
@@ -154,4 +163,17 @@ nano ~/.conan/conan.conf
 [general]
 +revisions_enabled = True
 ```
+
+## How to contribute
+Please read [contributing rules](https://github.com/artipie/artipie/blob/master/CONTRIBUTING.md).  
+Fork repository, make changes, send us a pull request. We will review
+your changes and apply them to the `master` branch shortly, provided
+they don't violate our quality standards. To avoid frustration, before
+sending us your pull request please run full Maven build:
+```
+$ mvn clean install -Pqulice
+```
+To avoid build errors use Maven 3.3+.
+
+Artipie [roadmap](https://github.com/orgs/artipie/projects/3).
 
