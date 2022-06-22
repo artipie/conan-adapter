@@ -20,7 +20,7 @@ Testing package uploading, with logging:
 
 export CONAN_TRACE_FILE=/tmp/conan_trace.log
 cd conan-center-index/recipes/zmqpp/all
-git checkout a03ace77400bb61463e60961b95ad44aab011e29 #for conan v1.37.2
+git checkout df1fb263e85c1543055231310ecb8c4d5bc4957b #in master, when tested for conan v1.50.0
 conan create . 4.2.0@
 conan upload zmqpp/4.2.0@ -r conan-local --all
 

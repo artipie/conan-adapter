@@ -318,7 +318,7 @@ class ConanSliceITCase {
     private static ImageFromDockerfile getBaseImage() {
         return new ImageFromDockerfile().withDockerfileFromBuilder(
             builder -> builder
-                .from("ubuntu:20.04")
+                .from("ubuntu:22.04")
                 .env("CONAN_TRACE_FILE", "/tmp/conan_trace.log")
                 .env("DEBIAN_FRONTEND", "noninteractive")
                 .env("no_proxy", "host.docker.internal,host.testcontainers.internal,localhost,127.0.0.1")
@@ -326,15 +326,14 @@ class ConanSliceITCase {
                 .run("apt update -y -o APT::Update::Error-Mode=any")
                 .run("apt install --no-install-recommends -y python3-pip curl g++ git make cmake")
                 .run("pip3 install -U pip setuptools")
-                .run("pip3 install -U conan==1.37.2 markupsafe==2.0.1")
+                .run("pip3 install -U conan==1.50.0")
                 .run("conan profile new --detect default")
                 .run("conan profile update settings.compiler.libcxx=libstdc++11 default")
                 .run("conan remote add conancenter https://center.conan.io False --force")
                 .run("conan remote add conan-center https://conan.bintray.com False --force")
                 .run("conan remote add conan-test http://host.testcontainers.internal:9300 False")
-                .run("conan remote remove conancenter")
-                .run("conan remote remove conan-center")
-                .run("conan config install https://github.com/conan-io/conanclientcert.git")
+                .run("conan remote disable conancenter")
+                .run("conan remote disable conan-center")
                 .build()
         );
     }
