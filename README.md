@@ -1,22 +1,23 @@
-<img src="https://www.artipie.com/logo.svg" width="64px" height="64px"/>
+<a href="http://artipie.com"><img src="https://www.artipie.com/logo.svg" width="64px" height="64px"/></a>
+
+[![Join our Telegramm group](https://img.shields.io/badge/Join%20us-Telegram-blue?&logo=telegram&?link=http://right&link=http://t.me/artipie)](http://t.me/artipie)
 
 [![EO principles respected here](https://www.elegantobjects.org/badge.svg)](https://www.elegantobjects.org)
 [![DevOps By Rultor.com](http://www.rultor.com/b/artipie/conan-adapter)](http://www.rultor.com/p/artipie/conan-adapter)
 [![We recommend IntelliJ IDEA](https://www.elegantobjects.org/intellij-idea.svg)](https://www.jetbrains.com/idea/)
 
 [![Javadoc](http://www.javadoc.io/badge/com.artipie/conan-adapter.svg)](http://www.javadoc.io/doc/com.artipie/conan-adapter)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/artipie/conan-adapter/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/artipie/conan-adapter/blob/master/LICENSE.txt)
 [![codecov](https://codecov.io/gh/artipie/conan-adapter/branch/master/graph/badge.svg)](https://codecov.io/gh/artipie/conan-adapter)
 [![Hits-of-Code](https://hitsofcode.com/github/artipie/conan-adapter)](https://hitsofcode.com/view/github/artipie/conan-adapter)
 [![Maven Central](https://img.shields.io/maven-central/v/com.artipie/conan-adapter.svg)](https://maven-badges.herokuapp.com/maven-central/com.artipie/conan-adapter)
 [![PDD status](http://www.0pdd.com/svg?name=artipie/conan-adapter)](http://www.0pdd.com/p?name=artipie/conan-adapter)
-
 # Conan Artipie adapter
 
 Conan is a [C/C++ repository](https://conan.io), this adapter is an SDK for work with Conan data and metadata and a HTTP endpoint for the Conan repository.
 
 If you have any question or suggestions, do not hesitate to create an issue or contact us in
-[Telegram](https://t.me/artipie). Artipie roadmap is available [here](https://github.com/orgs/artipie/projects/3).]
+[Telegram](https://t.me/artipie). Artipie roadmap is available [here](https://github.com/orgs/artipie/projects/3).
 
 ## How does Conan work
 
