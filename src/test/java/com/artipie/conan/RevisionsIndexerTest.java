@@ -31,7 +31,6 @@ import com.artipie.asto.test.TestResource;
 import java.io.StringReader;
 import java.time.Instant;
 import java.util.List;
-import java.util.stream.Stream;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonValue;
@@ -39,15 +38,12 @@ import javax.json.stream.JsonParser;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Tests for RevisionsIndexApi class.
  * @since 0.1
  */
-@SuppressWarnings("PMD.UseVarargs")
+@SuppressWarnings({"PMD.UseVarargs", "PMD.AvoidDuplicateLiterals"})
 class RevisionsIndexerTest {
 
     /**
@@ -69,6 +65,21 @@ class RevisionsIndexerTest {
      * Path to zlib package recipe index file.
      */
     private static final String ZLIB_SRC_INDEX = "zlib/1.2.11/_/_/revisions.txt";
+
+    /**
+     * Conan server zlib package files list for unit tests.
+     */
+    private static final String[] CONAN_TEST_PKG = {
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conaninfo.txt",
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conan_package.tgz",
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conanmanifest.txt",
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/revisions.txt",
+        "zlib/1.2.11/_/_/0/export/conan_export.tgz",
+        "zlib/1.2.11/_/_/0/export/conanfile.py",
+        "zlib/1.2.11/_/_/0/export/conanmanifest.txt",
+        "zlib/1.2.11/_/_/0/export/conan_sources.tgz",
+        "zlib/1.2.11/_/_/revisions.txt",
+    };
 
     /**
      * Test storage.
@@ -99,11 +110,10 @@ class RevisionsIndexerTest {
         );
     }
 
-    @ParameterizedTest
-    @MethodSource("testPackageFilesList")
-    void indexBuild(final String[] files) {
+    @Test
+    void indexBuild() {
         final Key pkgkey = new Key.From(RevisionsIndexerTest.ZLIB_SRC_PKG);
-        for (final String file : files) {
+        for (final String file : RevisionsIndexerTest.CONAN_TEST_PKG) {
             new TestResource(String.join("", RevisionsIndexerTest.DIR_PREFIX, file))
                 .saveTo(this.storage, new Key.From(file));
         }
@@ -135,24 +145,5 @@ class RevisionsIndexerTest {
 
     private static String getJsonStr(final JsonValue object, final String key) {
         return object.asJsonObject().get(key).toString().replaceAll("\"", "");
-    }
-
-    /**
-     * Returns test package files list for indexing tests (without revisions.txt files).
-     * @return List of files, as Stream of junit Arguments.
-     * @checkstyle LineLengthCheck (20 lines)
-     */
-    @SuppressWarnings({"PMD.UnusedPrivateMethod", "PMD.LineLengthCheck"})
-    private static Stream<Arguments> testPackageFilesList() {
-        final String[] files = new String[]{
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conanmanifest.txt",
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conaninfo.txt",
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conan_package.tgz",
-            "zlib/1.2.11/_/_/0/export/conan_sources.tgz",
-            "zlib/1.2.11/_/_/0/export/conan_export.tgz",
-            "zlib/1.2.11/_/_/0/export/conanfile.py",
-            "zlib/1.2.11/_/_/0/export/conanmanifest.txt",
-        };
-        return Stream.of(Arguments.of((Object) files));
     }
 }

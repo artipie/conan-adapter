@@ -28,12 +28,8 @@ import com.artipie.asto.Storage;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
 import java.util.List;
-import java.util.stream.Stream;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Tests for PackageList class.
@@ -52,6 +48,21 @@ class PackageListTest {
      */
     private static final String DIR_PREFIX = "conan-test/data/";
 
+    /**
+     * Conan server zlib package files list for unit tests.
+     */
+    private static final String[] CONAN_TEST_PKG = {
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conaninfo.txt",
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conan_package.tgz",
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conanmanifest.txt",
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/revisions.txt",
+        "zlib/1.2.11/_/_/0/export/conan_export.tgz",
+        "zlib/1.2.11/_/_/0/export/conanfile.py",
+        "zlib/1.2.11/_/_/0/export/conanmanifest.txt",
+        "zlib/1.2.11/_/_/0/export/conan_sources.tgz",
+        "zlib/1.2.11/_/_/revisions.txt",
+    };
+
     @Test
     public void emptyList() {
         final Key pkgkey = new Key.From(PackageListTest.ZLIB_SRC_PKG);
@@ -64,12 +75,11 @@ class PackageListTest {
         );
     }
 
-    @ParameterizedTest
-    @MethodSource("testPackageFilesList")
-    public void packageList(final String[] files) {
+    @Test
+    public void packageList() {
         final Key pkgkey = new Key.From(PackageListTest.ZLIB_SRC_PKG);
         final Storage storage = new InMemoryStorage();
-        for (final String file : files) {
+        for (final String file : PackageListTest.CONAN_TEST_PKG) {
             new TestResource(String.join("", PackageListTest.DIR_PREFIX, file))
                 .saveTo(storage, new Key.From(file));
         }
@@ -84,24 +94,5 @@ class PackageListTest {
             "Invalid binary package id",
             bins.get(0).equals("6af9cc7cb931c5ad942174fd7838eb655717c709")
         );
-    }
-
-    /**
-     * Returns test package files list for indexing tests (without revisions.txt files).
-     * @return List of files, as Stream of junit Arguments.
-     * @checkstyle LineLengthCheck (20 lines)
-     */
-    @SuppressWarnings({"PMD.UnusedPrivateMethod", "PMD.LineLengthCheck"})
-    private static Stream<Arguments> testPackageFilesList() {
-        final String[] files = new String[]{
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conanmanifest.txt",
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conaninfo.txt",
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conan_package.tgz",
-            "zlib/1.2.11/_/_/0/export/conan_sources.tgz",
-            "zlib/1.2.11/_/_/0/export/conan_export.tgz",
-            "zlib/1.2.11/_/_/0/export/conanfile.py",
-            "zlib/1.2.11/_/_/0/export/conanmanifest.txt",
-        };
-        return Stream.of(Arguments.of((Object) files));
     }
 }

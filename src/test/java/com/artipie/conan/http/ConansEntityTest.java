@@ -42,12 +42,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.stream.Stream;
 import javax.json.Json;
 import org.json.JSONException;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 import org.skyscreamer.jsonassert.JSONAssert;
 
@@ -63,66 +60,74 @@ class ConansEntityTest {
      */
     private static final String DIR_PREFIX = "conan-test/data";
 
-    @ParameterizedTest
-    @MethodSource("conanTestFilesList")
-    public void downloadBinTest(final String... files) throws JSONException {
+    /**
+     * Conan server zlib package files list for unit tests.
+     */
+    private static final String[] CONAN_TEST_PKG = {
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conaninfo.txt",
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conan_package.tgz",
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conanmanifest.txt",
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/revisions.txt",
+        "zlib/1.2.11/_/_/0/export/conan_export.tgz",
+        "zlib/1.2.11/_/_/0/export/conanfile.py",
+        "zlib/1.2.11/_/_/0/export/conanmanifest.txt",
+        "zlib/1.2.11/_/_/0/export/conan_sources.tgz",
+        "zlib/1.2.11/_/_/revisions.txt",
+    };
+
+    @Test
+    public void downloadBinTest() throws JSONException {
         this.runTest(
             "/v1/conans/zlib/1.2.11/_/_/packages/6af9cc7cb931c5ad942174fd7838eb655717c709/download_urls",
-            "http/download_bin_urls.json", files, ConansEntity.DownloadBin::new
+            "http/download_bin_urls.json", ConansEntityTest.CONAN_TEST_PKG, ConansEntity.DownloadBin::new
         );
     }
 
-    @ParameterizedTest
-    @MethodSource("conanTestFilesList")
-    public void downloadSrcTest(final String... files) throws JSONException {
+    @Test
+    public void downloadSrcTest() throws JSONException {
         this.runTest(
             "/v1/conans/zlib/1.2.11/_/_/download_urls", "http/download_src_urls.json",
-            files, ConansEntity.DownloadSrc::new
+            ConansEntityTest.CONAN_TEST_PKG, ConansEntity.DownloadSrc::new
         );
     }
 
-    @ParameterizedTest
-    @MethodSource("conanTestFilesList")
-    public void getSearchBinPkgTest(final String... files) throws JSONException {
+    @Test
+    public void getSearchBinPkgTest() throws JSONException {
         this.runTest(
             "/v1/conans/zlib/1.2.11/_/_/search", "http/pkg_bin_search.json",
-            files, ConansEntity.GetSearchBinPkg::new
+            ConansEntityTest.CONAN_TEST_PKG, ConansEntity.GetSearchBinPkg::new
         );
     }
 
-    @ParameterizedTest
-    @MethodSource("conanTestFilesList")
-    public void getPkgInfoTest(final String... files) throws JSONException {
+    @Test
+    public void getPkgInfoTest() throws JSONException {
         this.runTest(
             "/v1/conans/zlib/1.2.11/_/_/packages/6af9cc7cb931c5ad942174fd7838eb655717c709",
-            "http/pkg_bin_info.json", files, ConansEntity.GetPkgInfo::new
+            "http/pkg_bin_info.json", ConansEntityTest.CONAN_TEST_PKG, ConansEntity.GetPkgInfo::new
         );
     }
 
-    @ParameterizedTest
-    @MethodSource("conanTestFilesList")
-    public void getSearchSrcPkgTest(final String... files) throws JSONException {
+    @Test
+    public void getSearchSrcPkgTest() throws JSONException {
         this.runTest(
             "/v1/conans/search?q=zlib", "http/pkg_src_search.json",
-            files, ConansEntity.GetSearchSrcPkg::new
+            ConansEntityTest.CONAN_TEST_PKG, ConansEntity.GetSearchSrcPkg::new
         );
     }
 
-    @ParameterizedTest
-    @MethodSource("conanTestFilesList")
-    public void digestForPkgTest(final String... files) throws JSONException {
+    @Test
+    public void digestForPkgTest() throws JSONException {
         this.runTest(
             "/v1/conans/zlib/1.2.11/_/_/digest", "http/pkg_digest.json",
-            files, ConansEntity.DigestForPkg::new
+            ConansEntityTest.CONAN_TEST_PKG, ConansEntity.DigestForPkg::new
         );
     }
 
-    @ParameterizedTest
-    @MethodSource("conanTestFilesList")
-    void getSrcPkgInfoTest(final String... files) throws JSONException {
+    @Test
+    void getSrcPkgInfoTest() throws JSONException {
         this.runTest(
             "/v1/conans/zlib/1.2.11/_/_", "http/pkg_src_info.json",
-            files, ConansEntity.GetSrcPkgInfo::new
+            ConansEntityTest.CONAN_TEST_PKG, ConansEntity.GetSrcPkgInfo::new
         );
     }
 
@@ -154,25 +159,6 @@ class ConansEntityTest {
         response.send(new FakeConnection(out)).toCompletableFuture().join();
         final String actual = new String(out.get(), StandardCharsets.UTF_8);
         JSONAssert.assertEquals(expected, actual, true);
-    }
-
-    /**
-     * Returns test package files list for this tests (without revisions.txt files).
-     * @return List of files, as Stream of junit Arguments.
-     * @checkstyle LineLengthCheck (20 lines)
-     */
-    @SuppressWarnings({"PMD.UnusedPrivateMethod", "PMD.LineLengthCheck"})
-    private static Stream<Arguments> conanTestFilesList() {
-        final String[] files = new String[]{
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conanmanifest.txt",
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conaninfo.txt",
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conan_package.tgz",
-            "zlib/1.2.11/_/_/0/export/conan_sources.tgz",
-            "zlib/1.2.11/_/_/0/export/conan_export.tgz",
-            "zlib/1.2.11/_/_/0/export/conanfile.py",
-            "zlib/1.2.11/_/_/0/export/conanmanifest.txt",
-        };
-        return Stream.of(Arguments.of((Object) files));
     }
 
     /**

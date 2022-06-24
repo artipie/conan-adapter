@@ -29,16 +29,12 @@ import com.artipie.asto.blocking.BlockingStorage;
 import com.artipie.asto.memory.InMemoryStorage;
 import com.artipie.asto.test.TestResource;
 import java.io.StringReader;
-import java.util.stream.Stream;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Tests for FullIndexer class.
@@ -60,6 +56,21 @@ class FullIndexerTest {
     private static final Key ZLIB_SRC_INDEX = new Key.From(
         "zlib/1.2.11/_/_/revisions.txt"
     );
+
+    /**
+     * Conan server zlib package files list for unit tests.
+     */
+    private static final String[] CONAN_TEST_PKG = {
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conaninfo.txt",
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conan_package.tgz",
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conanmanifest.txt",
+        "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/revisions.txt",
+        "zlib/1.2.11/_/_/0/export/conan_export.tgz",
+        "zlib/1.2.11/_/_/0/export/conanfile.py",
+        "zlib/1.2.11/_/_/0/export/conanmanifest.txt",
+        "zlib/1.2.11/_/_/0/export/conan_sources.tgz",
+        "zlib/1.2.11/_/_/revisions.txt",
+    };
 
     /**
      * Path prefix for conan repository test data.
@@ -105,10 +116,9 @@ class FullIndexerTest {
         );
     }
 
-    @ParameterizedTest
-    @MethodSource("indexingTestFilesList")
-    public void fullIndexUpdate(final String[] files) {
-        for (final String file : files) {
+    @Test
+    public void fullIndexUpdate() {
+        for (final String file : FullIndexerTest.CONAN_TEST_PKG) {
             new TestResource(String.join("/", FullIndexerTest.DIR_PREFIX, file))
                 .saveTo(this.storage, new Key.From(file));
         }
@@ -140,24 +150,5 @@ class FullIndexerTest {
         MatcherAssert.assertThat(
             "Must exist one binary revision", binrevs.size() == 1
         );
-    }
-
-    /**
-     * Returns test package files list for indexing tests (without revisions.txt files).
-     * @return List of files, as Stream of junit Arguments.
-     * @checkstyle LineLengthCheck (20 lines)
-     */
-    @SuppressWarnings({"PMD.UnusedPrivateMethod", "PMD.LineLengthCheck"})
-    private static Stream<Arguments> indexingTestFilesList() {
-        final String[] files = new String[]{
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conanmanifest.txt",
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conaninfo.txt",
-            "zlib/1.2.11/_/_/0/package/6af9cc7cb931c5ad942174fd7838eb655717c709/0/conan_package.tgz",
-            "zlib/1.2.11/_/_/0/export/conan_sources.tgz",
-            "zlib/1.2.11/_/_/0/export/conan_export.tgz",
-            "zlib/1.2.11/_/_/0/export/conanfile.py",
-            "zlib/1.2.11/_/_/0/export/conanmanifest.txt",
-        };
-        return Stream.of(Arguments.of((Object) files));
     }
 }
