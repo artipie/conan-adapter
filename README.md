@@ -14,7 +14,9 @@
 [![PDD status](http://www.0pdd.com/svg?name=artipie/conan-adapter)](http://www.0pdd.com/p?name=artipie/conan-adapter)
 # Conan Artipie adapter
 
-Conan is a [C/C++ repository](https://conan.io), this adapter is an SDK for work with Conan data and metadata and a HTTP endpoint for the Conan repository.
+Conan is a [C/C++ package manager](https://conan.io), this Artipie conan adapter aims to provide:
+* Conan packages server with corresponding HTTP APIs and endpoint.
+* SDK - Java APIs to access Conan metadata.
 
 If you have any question or suggestions, do not hesitate to create an issue or contact us in
 [Telegram](https://t.me/artipie). Artipie roadmap is available [here](https://github.com/orgs/artipie/projects/3).
