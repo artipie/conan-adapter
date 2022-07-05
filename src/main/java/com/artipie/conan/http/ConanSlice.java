@@ -107,11 +107,22 @@ public final class ConanSlice extends Slice.Wrap {
                 ),
                 new RtRulePath(
                     new RtRule.All(
-                        new RtRule.ByPath(new PathWrap.DigestForPkg().getPath()),
+                        new RtRule.ByPath(new PathWrap.DigestForPkgBin().getPath()),
                         ByMethodsRule.Standard.GET
                     ),
                     new BasicAuthSlice(
-                        new ConansEntity.DigestForPkg(storage),
+                        new ConansEntity.DigestForPkgBin(storage),
+                        auth,
+                        new Permission.ByName(perms, Action.Standard.READ)
+                    )
+                ),
+                new RtRulePath(
+                    new RtRule.All(
+                        new RtRule.ByPath(new PathWrap.DigestForPkgSrc().getPath()),
+                        ByMethodsRule.Standard.GET
+                    ),
+                    new BasicAuthSlice(
+                        new ConansEntity.DigestForPkgSrc(storage),
                         auth,
                         new Permission.ByName(perms, Action.Standard.READ)
                     )

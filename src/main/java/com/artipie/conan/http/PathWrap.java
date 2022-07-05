@@ -241,15 +241,28 @@ public abstract class PathWrap {
     }
 
     /**
-     * Request to check package presense and retrieving manifest.
+     * Request to check package recipe presense and retrieving manifest.
      * @since 0.1
      */
-    public static class DigestForPkg extends PathWrap {
+    public static class DigestForPkgSrc extends PathWrap {
         /**
          * Ctor.
          */
-        protected DigestForPkg() {
+        protected DigestForPkgSrc() {
             super("^/v1/conans/(?<path>.*)/digest");
+        }
+    }
+
+    /**
+     * Request to check package binary presense and retrieving manifest.
+     * @since 0.1
+     */
+    public static class DigestForPkgBin extends PathWrap {
+        /**
+         * Ctor.
+         */
+        protected DigestForPkgBin() {
+            super("^/v1/conans/(?<path>.*)/packages/(?<hash>[0-9,a-f]*)/digest");
         }
     }
 

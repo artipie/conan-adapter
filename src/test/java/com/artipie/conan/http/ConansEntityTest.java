@@ -116,10 +116,18 @@ class ConansEntityTest {
     }
 
     @Test
-    public void digestForPkgTest() throws JSONException {
+    public void digestForPkgSrcTest() throws JSONException {
         this.runTest(
             "/v1/conans/zlib/1.2.11/_/_/digest", "http/pkg_digest.json",
-            ConansEntityTest.CONAN_TEST_PKG, ConansEntity.DigestForPkg::new
+            ConansEntityTest.CONAN_TEST_PKG, ConansEntity.DigestForPkgSrc::new
+        );
+    }
+
+    @Test
+    public void digestForPkgBinTest() throws JSONException {
+        this.runTest(
+            "/v1/conans/zlib/1.2.11/_/_/packages/6af9cc7cb931c5ad942174fd7838eb655717c709/digest", "http/pkg_digest_bin.json",
+            ConansEntityTest.CONAN_TEST_PKG, ConansEntity.DigestForPkgBin::new
         );
     }
 

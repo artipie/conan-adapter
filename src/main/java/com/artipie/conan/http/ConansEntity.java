@@ -398,17 +398,17 @@ public final class ConansEntity {
     }
 
     /**
-     * Conan /package/digest REST API.
+     * Conan package recipe /package/digest REST API.
      * @since 0.1
      */
-    public static final class DigestForPkg extends BaseConanSlice {
+    public static final class DigestForPkgSrc extends BaseConanSlice {
 
         /**
          * Ctor.
          * @param storage Current Artipie storage instance.
          */
-        public DigestForPkg(final Storage storage) {
-            super(storage, new PathWrap.DigestForPkg());
+        public DigestForPkgSrc(final Storage storage) {
+            super(storage, new PathWrap.DigestForPkgSrc());
         }
 
         @Override
@@ -440,6 +440,60 @@ public final class ConansEntity {
                         builder.setPath(key.string());
                         result = String.format(
                             "{ \"%1$s\": \"%2$s\"}", ConansEntity.CONAN_MANIFEST,
+                            builder.toString()
+                        );
+                    } else {
+                        result = "";
+                    }
+                    return result;
+                });
+        }
+    }
+
+    /**
+     * Conan /package/~hash~/digest REST API.
+     * @since 0.1
+     */
+    public static final class DigestForPkgBin extends BaseConanSlice {
+
+        /**
+         * Ctor.
+         * @param storage Current Artipie storage instance.
+         */
+        public DigestForPkgBin(final Storage storage) {
+            super(storage, new PathWrap.DigestForPkgBin());
+        }
+
+        @Override
+        public CompletableFuture<RequestResult> getResult(final RequestLineFrom request,
+            final String hostname, final Matcher matcher) {
+            return this.checkPkg(matcher, hostname).thenApply(RequestResult::new);
+        }
+
+        /**
+         * Check package manifest existance and providing manifest download URL.
+         * @param matcher Request parameters matcher.
+         * @param hostname Host name or IP for generation URL.
+         * @return Json string with conan manifest URL.
+         */
+        private CompletableFuture<String> checkPkg(final Matcher matcher, final String hostname) {
+            final String pkghash = matcher.group(ConansEntity.URI_HASH);
+            final String uripath = matcher.group(ConansEntity.URI_PATH);
+            final Key key = new Key.From(
+                String.join(
+                    "", "", uripath, ConansEntity.PKG_BIN_DIR,
+                    pkghash, ConansEntity.PKG_REV_DIR, ConansEntity.CONAN_MANIFEST
+                ));
+            return this.getStorage().exists(key).thenApply(
+                exist -> {
+                    final String result;
+                    if (exist) {
+                        final URIBuilder builder = new URIBuilder();
+                        builder.setScheme(ConansEntity.PROTOCOL);
+                        builder.setHost(hostname);
+                        builder.setPath(key.string());
+                        result = String.format(
+                            "{\"%1$s\": \"%2$s\"}", ConansEntity.CONAN_MANIFEST,
                             builder.toString()
                         );
                     } else {
