@@ -1,81 +1,78 @@
 from conans import AutoToolsBuildEnvironment, ConanFile, tools
 from conans.errors import ConanInvalidConfiguration
-
 import os
+
+required_conan_version = ">=1.36.0"
 
 
 class HiredisConan(ConanFile):
     name = "hiredis"
-    version = "0.14.1"
-
-    description = "Minimalistic C client for Redis >= 1.2"
-    topics = ("conan", "c", "redis")
-
+    description = "Hiredis is a minimalistic C client library for the Redis database."
     license = "BSD-3-Clause"
-    settings = "os", "arch", "compiler", "build_type"
-
+    topics = ("hiredis", "redis", "client", "database")
     homepage = "https://github.com/redis/hiredis"
     url = "https://github.com/conan-io/conan-center-index"
 
+    settings = "os", "arch", "compiler", "build_type"
     options = {
+        "shared": [True, False],
         "fPIC": [True, False],
-        "shared": [True, False]
     }
     default_options = {
+        "shared": False,
         "fPIC": True,
-        "shared": False
     }
-
-    def _configure_autotools(self):
-        autoTools = AutoToolsBuildEnvironment(self, win_bash=tools.os_info.is_windows)
-        return autoTools
 
     @property
     def _source_subfolder(self):
         return "source_subfolder"
 
+    def export_sources(self):
+        for patch in self.conan_data.get("patches", {}).get(self.version, []):
+            self.copy(patch["patch_file"])
+
     def configure(self):
+        if self.options.shared:
+            del self.options.fPIC
         del self.settings.compiler.cppstd
         del self.settings.compiler.libcxx
 
+    def validate(self):
         if self.settings.os == "Windows":
-            raise ConanInvalidConfiguration("hiredis %s is not supported on Windows." % self.version)
+            raise ConanInvalidConfiguration("hiredis {} is not supported on Windows.".format(self.version))
 
     def source(self):
-        tools.get(**self.conan_data["sources"][self.version])
-        extracted_folder = self.name + "-" + self.version
-        os.rename(extracted_folder, self._source_subfolder)
+        tools.get(**self.conan_data["sources"][self.version],
+                  destination=self._source_subfolder, strip_root=True)
+
+    def _patch_sources(self):
+        for patch in self.conan_data.get("patches", {}).get(self.version, []):
+            tools.patch(**patch)
+        # Do not force PIC if static
+        if not self.options.shared:
+            makefile = os.path.join(self._source_subfolder, "Makefile")
+            tools.replace_in_file(makefile, "-fPIC ", "")
 
     def build(self):
-        # update makefile
-        makefile = os.path.join(self.source_folder, self._source_subfolder, "Makefile")
-        tools.replace_in_file(makefile, "-fPIC ", "", strict=False)
-
-        with tools.chdir(os.path.join(self.source_folder, self._source_subfolder)):
-            autoTools = self._configure_autotools()
+        self._patch_sources()
+        with tools.chdir(self._source_subfolder):
+            autoTools = AutoToolsBuildEnvironment(self, win_bash=tools.os_info.is_windows)
             autoTools.make()
 
     def package(self):
-        with tools.chdir(os.path.join(self.source_folder, self._source_subfolder)):
-            autoTools = self._configure_autotools()
-            autoTools.install(vars={
-                "DESTDIR": os.path.join(self.build_folder),
-                "PREFIX": ""
-            })
-
-        # headers
-        self.copy("*.h", dst=os.path.join("include", "hiredis"), src=os.path.join("include", "hiredis"))
-
-        # libs
-        if self.options.shared:
-            self.copy("*.dylib", dst="lib", keep_path=False)
-            self.copy("*.so", dst="lib", keep_path=False)
-            self.copy("*.so.*", dst="lib", keep_path=False)
-        else:
-            self.copy("*.a", dst="lib", keep_path=False)
-
-        # licenses
         self.copy("COPYING", dst="licenses", src=self._source_subfolder)
+        with tools.chdir(self._source_subfolder):
+            autoTools = AutoToolsBuildEnvironment(self, win_bash=tools.os_info.is_windows)
+            autoTools.install(vars={
+                "DESTDIR": tools.unix_path(self.package_folder),
+                "PREFIX": "",
+            })
+        tools.remove_files_by_mask(
+            os.path.join(self.package_folder, "lib"),
+            "*.a" if self.options.shared else "*.[so|dylib]*",
+        )
+        tools.rmdir(os.path.join(self.package_folder, "lib", "pkgconfig"))
 
     def package_info(self):
-        self.cpp_info.libs = tools.collect_libs(self)
+        self.cpp_info.set_property("pkg_config_name", "hiredis")
+        self.cpp_info.libs = ["hiredis"]

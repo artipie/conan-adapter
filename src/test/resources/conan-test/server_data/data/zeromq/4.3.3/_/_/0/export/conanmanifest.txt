@@ -1,6 +1,5 @@
-1613588478
-conandata.yml: fe771ccc2760687c26c92a5f6f15d7f0
-conanfile.py: a09f4fad3d2a1dcf99a18fb471f3e41b
-export_source/CMakeLists.txt: b8a02c597c42d803855fd9f682fb1dc9
-export_source/patches/0001-problem-__try-and-__except-isn-t-universally-supported-on-windows.patch: 58f441615d5f8da92e8a357cbf38fddb
-export_source/patches/0002-problem-invalid-syntax-for-calling-convention-on-function.patch: 1e775a3512517c30d2585ba5b0b0f413
+1643369021
+conandata.yml: 824c42231a13ce8373c275b256274f2c
+conanfile.py: c6ef09e8ccaefdf4c7caade80d67b0ac
+export_source/CMakeLists.txt: 93de4a35517bd21e4f286ff36801bbd6
+export_source/patches/0003-rpath-macos-4.3.3.patch: b56e7e21ee459155ef53e404f99170de

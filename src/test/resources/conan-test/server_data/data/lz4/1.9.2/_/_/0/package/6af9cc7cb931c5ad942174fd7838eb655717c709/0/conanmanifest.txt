@@ -1,7 +1,0 @@
-1606064554
-conaninfo.txt: 6852a261174557d9f7edd1fe7272d1a1
-include/lz4.h: 65d60a32ddfe386334032bb9acb7d479
-include/lz4frame.h: b0d5b0ec6cd31a8c3e8d7cc352add3a5
-include/lz4hc.h: a98e661182a7a74feb63090a1c6dc83a
-lib/liblz4.a: fc1ae7c32158aa206889f65f637a7e30
-licenses/LICENSE: d57c0d21cb917fb4e0af2454aa48b956

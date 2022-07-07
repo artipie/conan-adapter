@@ -1,6 +1,0 @@
-1606064518
-conandata.yml: 983d150d7ebbf05fe3ef186ed12d7540
-conanfile.py: 4c936932448f408ec2ca81b766b1d29e
-export_source/CMakeLists.txt: 2537a50b5b37522852552b836995b956
-export_source/patches/0001-cmake-add-shared-DEFINE_SYMBOL.patch: e1ee96c3f331143da711fccb21ba22dc
-export_source/patches/0002-cmake-optional-cli.patch: dc75d7a4450bb1f362b83c3b8b26cfa6
