@@ -271,7 +271,7 @@ class ConanSliceITCase {
                 .saveTo(this.storage, new Key.From(file));
         }
         final Container.ExecResult install = this.cntn.execInContainer(
-            "conan", "install", "zlib/1.2.11@", "-r", "conan-test"
+            "conan", "install", "zlib/1.2.11@", "-r", "conan-test", "-b"
         );
         final Container.ExecResult upload = this.cntn.execInContainer(
             "conan", "upload", "zlib/1.2.11@", "-r", "conan-test", "--all"
